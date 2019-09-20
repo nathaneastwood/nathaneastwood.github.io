@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>Including Optional Functionality from Other Packages in Your Code - Random R Ramblings</title>
+<meta property="og:title" content="Including Optional Functionality from Other Packages in Your Code - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/nathaneastwood">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/nathaneastwood/">LinkedIn</a></li>
+    
+    <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood">Stack Overflow</a></li>
+    
+    <li><a href="https://twitter.com/nathaneastwood_">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">6 min read</span>
+    
+
+    <h1 class="article-title">Including Optional Functionality from Other Packages in Your Code</h1>
+
+    
+    <span class="article-date">2019-09-05</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Let’s say you want to write a function with optional functionality which is dependent on the installation of a package that your colleague may not have installed. For example, let’s say you want to have an option to return a <code>data.table</code> (or a <code>tibble</code>) instead of a <code>data.frame</code>, but in this case you don’t want to force your function’s user to have to install <code>data.table</code> (or <code>tibble</code> - and its dependencies) just to use your function. Maybe they can’t install it because they are restricted to do so by their IT department or maybe they are working offline. Is it possible to do this?</p>
+</div>
+<div id="a-toy-example" class="section level1">
+<h1>A Toy Example</h1>
+<p>Let’s say we have a simple function which takes a <code>data.frame</code> and adds a new column which is a multiplication of an existing column, before returning the whole <code>data.frame</code> with that new column.</p>
+<pre class="r"><code>toy_function &lt;- function(data, column, multiple = 2L, as_data_table = FALSE) {
+  stopifnot(is.integer(multiple) || is.numeric(multiple))
+  new_column_name &lt;- paste(column, multiple, sep = &quot;_&quot;)
+  data[, new_column_name] &lt;- data[, column] * multiple
+  if (as_data_table) data &lt;- data.table::setDT(data)
+  return(data)
+}</code></pre>
+<p>Running this function with <code>as_data_table = TRUE</code> without <code>data.table</code> installed will give the following error:</p>
+<pre class="r"><code>toy_function(mtcars, &quot;mpg&quot;, as_data_table = TRUE)
+# Error in loadNamespace(name) : there is no package called ‘data.table’</code></pre>
+<p>This is a frustration for the user. This also means that the whole function no longer works and doesn’t return anything. So what can we do? Well, this is where the function <code>requireNamespace()</code> comes in handy.</p>
+<blockquote>
+<p><code>requireNamespace</code> is a wrapper for <code>loadNamespace</code> analogous to require that returns a <code>logical</code> value.</p>
+</blockquote>
+<p>Using <code>requireNamespace()</code>, we can test whether or not the <code>data.table</code> package can be loaded from the user’s library before running certain functionality. Let’s take a look at how this changes our function:</p>
+<pre class="r"><code>toy_function &lt;- function(data, column, multiple = 2L, as_data_table = FALSE) {
+  stopifnot(is.integer(multiple) || is.numeric(multiple))
+  new_column_name &lt;- paste(column, multiple, sep = &quot;_&quot;)
+  data[, new_column_name] &lt;- data[, column] * multiple
+  if (as_data_table) {
+    if (!requireNamespace(&quot;data.table&quot;, quietly = TRUE)) {
+      warning(&quot;Please install package &#39;data.table&#39; when using &#39;as_data_table = TRUE&#39;&quot;)
+      return(data)
+    }
+    data &lt;- data.table::setDT(data)
+  }
+  return(data)
+}</code></pre>
+<p>Now when we run our function, the function will check for a <code>data.table</code> installation and if it is not available, it will warn us that we need to install <code>data.table</code> in order to use this functionality; yet it will still return the manipulated data, just as a <code>data.frame</code>.</p>
+<pre class="r"><code>toy_function(mtcars, &quot;mpg&quot;, as_data_table = TRUE)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb mpg_2
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4  42.0
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4  42.0
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1  45.6
+# ...
+# Ferrari Dino        19.7   6 145.0 175 3.62 2.770 15.50  0  1    5    6  39.4
+# Maserati Bora       15.0   8 301.0 335 3.54 3.570 14.60  0  1    5    8  30.0
+# Volvo 142E          21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2  42.8
+# Warning message:
+# In toy_function(mtcars, &quot;mpg&quot;, as_data_table = TRUE) :
+#   Please install package &#39;data.table&#39; when using &#39;as_data_table = TRUE&#39;</code></pre>
+<p>A real example of this can be seen in the <a href="https://github.com/fstpackage/fst"><code>fst</code></a> package. When using the <code>fst::read_fst()</code> function, the user has the option to return their loaded data <a href="https://github.com/fstpackage/fst/blob/develop/R/fst.R#L172">as a <code>data.table</code></a>.</p>
+<p>I really like how this way of using optional functionality does not force additional package downloads on people and also means that your code remains usable on restricted servers or offline. It’s also a great way to not clog up people’s libraries (I’m looking at you <code>tidyverse</code>).</p>
+</div>
+<div id="package-development" class="section level1">
+<h1>Package Development</h1>
+<p>This solution extends further when developing an R package. My current team is due to start utilising Spark, though our Spark cluster is not yet configured. I have therefore been testing new functionality using a local Spark cluster on our dev environment. Our production environment does not have the <code>sparklyr</code> package installed yet and so I cannot include any <code>sparklyr</code> code within my codebase…or can I?</p>
+<p>Typically when your package relies on another package for functionality, you list that package as an <code>Import</code> within your package’s <code>DESCRIPTION</code> file. But what this typically means is that when someone installs your package, they will also need to install the <code>Import</code>s. However if the dependency is not available to install, you will receive the following error upon installation.</p>
+<pre><code>==&gt; R CMD INSTALL --no-multiarch --with-keep.source mypackage
+
+* installing to library ‘/Library/Frameworks/R.framework/Versions/3.5/Resources/library’
+ERROR: dependency ‘sparklyr’ is not available for package ‘mypackage’
+* removing ‘/Library/Frameworks/R.framework/Versions/3.5/Resources/library/mypackage’
+
+Exited with status 1.</code></pre>
+<p>I am forgoing the idea that it probably isn’t best practice to include non-production code which will not work in your package, this blog post is for the purposes of demonstration only; the following is what you <em>could</em> do.</p>
+<p>Removing <code>sparklyr</code> from the <code>Import</code> list would allow us to install the package but we would then face two new issues. Firstly, end users could potentially run the function (even if it isn’t exported) and be faced with that same unhelpful error message we saw earlier.</p>
+<pre class="r"><code>my_function()
+# Error in loadNamespace(name) : there is no package called ‘sparklyr’</code></pre>
+<p>Secondly, from a developer’s point of view, the <code>R CMD check</code> would fail - which would in turn fail any CI/CD pipelines.</p>
+<pre class="r"><code>devtools::check()
+# ...
+# ❯ checking dependencies in R code ... WARNING
+#   &#39;::&#39; or &#39;:::&#39; import not declared from: ‘sparklyr’</code></pre>
+<p>So within my function, I simply place the below code (or similar) and if the user tries to run the function, it will simply stop and tell them they need to install the <code>sparklyr</code> package.</p>
+<pre class="r"><code>if (!requireNamespace(&quot;sparklyr&quot;, quietly = TRUE)) {
+  stop(&quot;Package sparklyr needed.&quot;)
+}</code></pre>
+<p>This will subsequently pass the <code>R CMD check</code>. Were this an open source package, I could add <code>sparklyr</code> to the <code>Suggests</code> field of the <code>DESCRIPTION</code> file such that users could install the <code>sparklyr</code> package to get the additional functionality if they wanted it (this is exactly what the <code>fst</code> package does).</p>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>So to conclude if you want to include functionality in your code which relies on other packages but are worried about people not having access to those packages, or simply don’t want to force your users to have to install the additional packages, then consider <code>requireNamespace()</code>. This is a great way of offering additional functionality without the need to clog up user’s libraries.</p>
+<p>Credit goes to my colleague <a href="https://twitter.com/jozefhajnala">Jozef Hajnala</a> who pointed out this really neat trick!</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>No Visible Binding for Global Variable - Random R Ramblings</title>
+<meta property="og:title" content="No Visible Binding for Global Variable - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/nathaneastwood">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/nathaneastwood/">LinkedIn</a></li>
+    
+    <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood">Stack Overflow</a></li>
+    
+    <li><a href="https://twitter.com/nathaneastwood_">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">6 min read</span>
+    
+
+    <h1 class="article-title">No Visible Binding for Global Variable</h1>
+
+    
+    <span class="article-date">2019-08-18</span>
+    
+
+    <div class="article-content">
+      
+
+
+<p>Recently I have been working on a very large legacy project which utilises the excellent <a href="https://github.com/Rdatatable/data.table"><code>data.table</code></a> package throughout. What this has resulted in is an <code>R CMD check</code> containing literally thousands of <code>NOTE</code>s similar to the following:</p>
+<pre><code>❯ checking R code for possible problems ... NOTE
+  my_fn: no visible binding for global variable ‘mpg’</code></pre>
+<p>There are several reasons why you might see these <code>NOTE</code>s and, for our code base, some of the <code>NOTE</code>s were potentially more damaging than others. This was a problem as these <code>NOTE</code>s were hidden firstly by a suppression of them due to a manipulation of the <code>_R_CHECK_CODETOOLS_PROFILE_</code> option of the <code>.Renviron</code> file. Once this was removed we discovered the more damaging <code>NOTE</code>s were hidden within the sheer amount of <code>NOTE</code>s we had in the <code>R CMD check</code>.</p>
+<div id="non-standard-evaluation" class="section level2">
+<h2>Non-standard Evaluation</h2>
+<p>If we have a function where we are using <code>data.table</code>’s modification by reference features, i.e. we are using a variable in an unquoted fashion (also known as non-standard evaluation (NSE)) then this issue will occur. Take the following function as an example.</p>
+<pre class="r"><code>my_fn &lt;- function() {
+  mtcars &lt;- data.table::data.table(mtcars)
+  mtcars[, mpg_div_hp := mpg / hp]
+  mtcars[]
+}</code></pre>
+<p>Here, we would find the following <code>NOTE</code>s:</p>
+<pre><code>❯ checking R code for possible problems ... NOTE
+  my_fn: no visible binding for global variable ‘mpg_div_hp’
+  my_fn: no visible binding for global variable ‘mpg’
+  my_fn: no visible binding for global variable ‘hp’
+  Undefined global functions or variables:
+    hp mpg mpg_div_hp</code></pre>
+<p>Sometimes you may also see these <code>NOTE</code>s for syntactic sugar such as <code>!!</code> or <code>:=</code> if you haven’t correctly imported the package they come from.</p>
+<p>This is a <a href="https://github.com/Rdatatable/data.table/issues/850">well discussed</a> issue on the internet which only became an issue after a change introduced to the core R code in version 2.15.1. There are two solutions to this problem.</p>
+<div id="option-one" class="section level3">
+<h3>Option One</h3>
+<p>Include all variable names within a <code>globalVariables()</code> call in the package documentation file.</p>
+<pre class="r"><code>globalVariables(c(&quot;mpg&quot;, &quot;hp&quot;, &quot;mpg_div_hp&quot;))</code></pre>
+<p>For our package, as there are literally thousands of variables to list in this file, it makes it very difficult to maintain this list and makes the file very long. If, however, the variables belong to data which are stored within your package then this can be greatly simplified to</p>
+<pre class="r"><code>globalVariables(names(my_data))</code></pre>
+<p>You may wish to import any syntactic sugar functionality here as well. For example</p>
+<pre class="r"><code>globalVariables(c(&quot;:=&quot;, &quot;!!&quot;))</code></pre>
+</div>
+<div id="option-two" class="section level3">
+<h3>Option Two</h3>
+<p>The second option involves binding the variable locally to the function. At the top of your function you can define the variable as a <code>NULL</code> value.</p>
+<pre class="r"><code>my_fn &lt;- function() {
+  mpg &lt;- hp &lt;- mpg_div_hp &lt;- NULL
+  mtcars &lt;- data.table::data.table(mtcars)
+  mtcars[, mpg_div_hp := mpg / hp]
+  mtcars[]
+}</code></pre>
+<p>Therefore your variable(s) are now bound to object(s) and so the <code>R CMD check</code> has nothing to complain about. This is the method that the <code>data.table</code> team <a href="https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html">recommend</a> and to me, feels like a much neater and more importantly maintainable solution than the first option.</p>
+</div>
+<div id="a-note-on-the-tidyverse" class="section level3">
+<h3>A Note on the Tidyverse</h3>
+<p>You may also come across this problem whilst programming using the <code>tidyverse</code> for which there is a very neat solution. You simply need to be more explicit within your function by using the <a href="https://cran.r-project.org/web/packages/dplyr/vignettes/programming.html"><code>.data</code> pronoun</a>.</p>
+<pre class="r"><code>#&#39; @importFrom rlang .data
+my_fn &lt;- function() {
+  mtcars %&gt;% 
+    mutate(mpg_div_hp = .data$mpg / .data$hp)
+}</code></pre>
+<p>Note the import!</p>
+</div>
+</div>
+<div id="selecting-variables-with-the-data.table-..-prefix" class="section level2">
+<h2>Selecting Variables with the <code>data.table</code> <code>..</code> Prefix</h2>
+<p><code>NOTE</code>s can occur when we are using the <code>..</code> syntax of <code>data.table</code>, for example</p>
+<pre class="r"><code>double_dot &lt;- function() {
+  mtcars &lt;- data.table::data.table(mtcars)
+  select_cols &lt;- c(&quot;cyl&quot;, &quot;wt&quot;)
+  mtcars[, ..select_cols]
+}</code></pre>
+<p>This will yield</p>
+<pre><code>❯ checking R code for possible problems ... NOTE
+  Undefined global functions or variables:
+    ..select_cols</code></pre>
+<p>In this instance, this can be solved by avoiding the <code>..</code> syntax and using the alternative <code>with = FALSE</code> notation.</p>
+<pre class="r"><code>double_dot &lt;- function() {
+  mtcars &lt;- data.table::data.table(mtcars)
+  select_cols &lt;- c(&quot;cyl&quot;, &quot;wt&quot;)
+  mtcars[, select_cols, with = FALSE]
+}</code></pre>
+<p>Even though the <code>..</code> prefix is syntactic sugar, we cannot use <code>globalVariables(c(".."))</code> since the actual variable in this case is <code>..select_cols</code>; we would therefore need to use <code>globalVariables(c("..select_cols"))</code> if we wanted to use the <code>globalVariables()</code> approach.</p>
+</div>
+<div id="missing-imports" class="section level2">
+<h2>Missing Imports</h2>
+<p>In our code base, I also found <code>NOTE</code>s for functions or datasets which were not correctly imported. For example, consider the following simple function.</p>
+<pre class="r"><code>Rversion &lt;- function() {
+  info &lt;- sessionInfo()
+  info$R.version
+}</code></pre>
+<p>This gives the following <code>NOTE</code>s:</p>
+<pre><code>❯ checking R code for possible problems ... NOTE
+  Rversion: no visible global function definition for ‘sessionInfo’
+  Consider adding
+    importFrom(&quot;utils&quot;, &quot;sessionInfo&quot;)
+  to your NAMESPACE file.</code></pre>
+<p>Here the <code>R CMD check</code> is rather helpful and tells us the solution; we need to ensure that we explicitly import the function from the <code>utils</code> package in the documentation. This can easily be done with the <a href="https://github.com/r-lib/roxygen2"><code>roxygen2</code></a> package by including an <code>@importFrom utils sessionInfo</code> tag.</p>
+</div>
+<div id="trying-to-call-removed-functionality" class="section level2">
+<h2>Trying to Call Removed Functionality</h2>
+<p>If you have a function which has been removed from your package but attempt to call it from another function, R will only give you a <code>NOTE</code> about this.</p>
+<pre class="r"><code>use_non_existent_function &lt;- function() {
+  this_function_doesnt_exist()
+}</code></pre>
+<p>This will give the <code>NOTE</code></p>
+<pre><code>❯ checking R code for possible problems ... NOTE
+  use_non_existent_function: no visible global function definition for
+    ‘this_function_doesnt_exist’</code></pre>
+<p>Of course it goes without saying that you should make sure to remove any calls to functions which have been removed from your package. As a side note, when I first started working on the project, I was initially unaware that within our package we had the option <code>_R_CHECK_CODETOOLS_PROFILE_ = "suppressUndefined = TRUE"</code> set within our <code>.Renviron</code> file which will suppresses all unbound global variable <code>NOTE</code>s from appearing in the <code>R CMD check</code>. However given that this can mask these deeper issues within your package, such as not recognising when a function calls functionality which has been removed from the package. This can end up meaning the end user can face nasty and confusing error messages. Therefore I would not recommend using this setting and would suggest tackling each of your packages <code>NOTE</code>s individually to remove them all.</p>
+<p>I actually discovered all of our package <code>NOTE</code>s when introducing the <a href="https://github.com/jimhester/lintr"><code>lintr</code></a> package to our CI pipeline. <code>lintr</code> will pick up on some – but not all – of these unbound global variable problems (<code>'lintr</code> of course does not take the <code>_R_CHECK_CODETOOLS_PROFILE_</code> into account). Take our original function as an example</p>
+<pre class="r"><code>my_fn &lt;- function() {
+  mtcars &lt;- data.table::data.table(mtcars)
+  mtcars[, mpg_div_hp := mpg / hp]
+  mtcars[]
+}</code></pre>
+<p>Here, <code>lintr</code> will highlight the variables <code>mpg</code> and <code>hp</code> as problems but it currently won’t highlight the variables on the LHS of <code>:=</code>, i.e. <code>mpg_div_hp</code>.</p>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>When developing your package, if you are experiencing these unbound global variables <code>NOTE</code>s you should</p>
+<ol style="list-style-type: decimal">
+<li>Strive to define any unbound variables locally within a function.</li>
+<li>Ensure that any functions or data from external packages (including <code>utils</code>, <code>stats</code>, etc.) have the correct <code>@importFrom</code> tag</li>
+<li>Do not suppress this check in the <code>.Renviron</code> file and the solutions proposed here should remove the current need to do so</li>
+<li>Any package wide unbound variables, which are typically syntactic sugar (e.g. <code>:=</code>), should be defined within the package description file inside a <code>globalVariables()</code> function, which should be a very short and maintainable list.</li>
+</ol>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

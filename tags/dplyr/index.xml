@@ -1,0 +1,236 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>dplyr on Random R Ramblings</title>
+    <link>/tags/dplyr/</link>
+    <description>Recent content in dplyr on Random R Ramblings</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <lastBuildDate>Thu, 05 Sep 2019 21:13:14 -0500</lastBuildDate>
+    
+        <atom:link href="/tags/dplyr/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Including Optional Functionality from Other Packages in Your Code</title>
+      <link>/2019/09/05/including-optional-functionality-from-other-packages-in-your-code/</link>
+      <pubDate>Thu, 05 Sep 2019 21:13:14 -0500</pubDate>
+      
+      <guid>/2019/09/05/including-optional-functionality-from-other-packages-in-your-code/</guid>
+      <description>
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Let’s say you want to write a function with optional functionality which is dependent on the installation of a package that your colleague may not have installed. For example, let’s say you want to have an option to return a &lt;code&gt;data.table&lt;/code&gt; (or a &lt;code&gt;tibble&lt;/code&gt;) instead of a &lt;code&gt;data.frame&lt;/code&gt;, but in this case you don’t want to force your function’s user to have to install &lt;code&gt;data.table&lt;/code&gt; (or &lt;code&gt;tibble&lt;/code&gt; - and its dependencies) just to use your function. Maybe they can’t install it because they are restricted to do so by their IT department or maybe they are working offline. Is it possible to do this?&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;a-toy-example&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;A Toy Example&lt;/h1&gt;
+&lt;p&gt;Let’s say we have a simple function which takes a &lt;code&gt;data.frame&lt;/code&gt; and adds a new column which is a multiplication of an existing column, before returning the whole &lt;code&gt;data.frame&lt;/code&gt; with that new column.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;toy_function &amp;lt;- function(data, column, multiple = 2L, as_data_table = FALSE) {
+  stopifnot(is.integer(multiple) || is.numeric(multiple))
+  new_column_name &amp;lt;- paste(column, multiple, sep = &amp;quot;_&amp;quot;)
+  data[, new_column_name] &amp;lt;- data[, column] * multiple
+  if (as_data_table) data &amp;lt;- data.table::setDT(data)
+  return(data)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Running this function with &lt;code&gt;as_data_table = TRUE&lt;/code&gt; without &lt;code&gt;data.table&lt;/code&gt; installed will give the following error:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;toy_function(mtcars, &amp;quot;mpg&amp;quot;, as_data_table = TRUE)
+# Error in loadNamespace(name) : there is no package called ‘data.table’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is a frustration for the user. This also means that the whole function no longer works and doesn’t return anything. So what can we do? Well, this is where the function &lt;code&gt;requireNamespace()&lt;/code&gt; comes in handy.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;requireNamespace&lt;/code&gt; is a wrapper for &lt;code&gt;loadNamespace&lt;/code&gt; analogous to require that returns a &lt;code&gt;logical&lt;/code&gt; value.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Using &lt;code&gt;requireNamespace()&lt;/code&gt;, we can test whether or not the &lt;code&gt;data.table&lt;/code&gt; package can be loaded from the user’s library before running certain functionality. Let’s take a look at how this changes our function:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;toy_function &amp;lt;- function(data, column, multiple = 2L, as_data_table = FALSE) {
+  stopifnot(is.integer(multiple) || is.numeric(multiple))
+  new_column_name &amp;lt;- paste(column, multiple, sep = &amp;quot;_&amp;quot;)
+  data[, new_column_name] &amp;lt;- data[, column] * multiple
+  if (as_data_table) {
+    if (!requireNamespace(&amp;quot;data.table&amp;quot;, quietly = TRUE)) {
+      warning(&amp;quot;Please install package &amp;#39;data.table&amp;#39; when using &amp;#39;as_data_table = TRUE&amp;#39;&amp;quot;)
+      return(data)
+    }
+    data &amp;lt;- data.table::setDT(data)
+  }
+  return(data)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now when we run our function, the function will check for a &lt;code&gt;data.table&lt;/code&gt; installation and if it is not available, it will warn us that we need to install &lt;code&gt;data.table&lt;/code&gt; in order to use this functionality; yet it will still return the manipulated data, just as a &lt;code&gt;data.frame&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;toy_function(mtcars, &amp;quot;mpg&amp;quot;, as_data_table = TRUE)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb mpg_2
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4  42.0
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4  42.0
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1  45.6
+# ...
+# Ferrari Dino        19.7   6 145.0 175 3.62 2.770 15.50  0  1    5    6  39.4
+# Maserati Bora       15.0   8 301.0 335 3.54 3.570 14.60  0  1    5    8  30.0
+# Volvo 142E          21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2  42.8
+# Warning message:
+# In toy_function(mtcars, &amp;quot;mpg&amp;quot;, as_data_table = TRUE) :
+#   Please install package &amp;#39;data.table&amp;#39; when using &amp;#39;as_data_table = TRUE&amp;#39;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;A real example of this can be seen in the &lt;a href=&#34;https://github.com/fstpackage/fst&#34;&gt;&lt;code&gt;fst&lt;/code&gt;&lt;/a&gt; package. When using the &lt;code&gt;fst::read_fst()&lt;/code&gt; function, the user has the option to return their loaded data &lt;a href=&#34;https://github.com/fstpackage/fst/blob/develop/R/fst.R#L172&#34;&gt;as a &lt;code&gt;data.table&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I really like how this way of using optional functionality does not force additional package downloads on people and also means that your code remains usable on restricted servers or offline. It’s also a great way to not clog up people’s libraries (I’m looking at you &lt;code&gt;tidyverse&lt;/code&gt;).&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;package-development&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Package Development&lt;/h1&gt;
+&lt;p&gt;This solution extends further when developing an R package. My current team is due to start utilising Spark, though our Spark cluster is not yet configured. I have therefore been testing new functionality using a local Spark cluster on our dev environment. Our production environment does not have the &lt;code&gt;sparklyr&lt;/code&gt; package installed yet and so I cannot include any &lt;code&gt;sparklyr&lt;/code&gt; code within my codebase…or can I?&lt;/p&gt;
+&lt;p&gt;Typically when your package relies on another package for functionality, you list that package as an &lt;code&gt;Import&lt;/code&gt; within your package’s &lt;code&gt;DESCRIPTION&lt;/code&gt; file. But what this typically means is that when someone installs your package, they will also need to install the &lt;code&gt;Import&lt;/code&gt;s. However if the dependency is not available to install, you will receive the following error upon installation.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;==&amp;gt; R CMD INSTALL --no-multiarch --with-keep.source mypackage
+
+* installing to library ‘/Library/Frameworks/R.framework/Versions/3.5/Resources/library’
+ERROR: dependency ‘sparklyr’ is not available for package ‘mypackage’
+* removing ‘/Library/Frameworks/R.framework/Versions/3.5/Resources/library/mypackage’
+
+Exited with status 1.&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I am forgoing the idea that it probably isn’t best practice to include non-production code which will not work in your package, this blog post is for the purposes of demonstration only; the following is what you &lt;em&gt;could&lt;/em&gt; do.&lt;/p&gt;
+&lt;p&gt;Removing &lt;code&gt;sparklyr&lt;/code&gt; from the &lt;code&gt;Import&lt;/code&gt; list would allow us to install the package but we would then face two new issues. Firstly, end users could potentially run the function (even if it isn’t exported) and be faced with that same unhelpful error message we saw earlier.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;my_function()
+# Error in loadNamespace(name) : there is no package called ‘sparklyr’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Secondly, from a developer’s point of view, the &lt;code&gt;R CMD check&lt;/code&gt; would fail - which would in turn fail any CI/CD pipelines.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;devtools::check()
+# ...
+# ❯ checking dependencies in R code ... WARNING
+#   &amp;#39;::&amp;#39; or &amp;#39;:::&amp;#39; import not declared from: ‘sparklyr’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So within my function, I simply place the below code (or similar) and if the user tries to run the function, it will simply stop and tell them they need to install the &lt;code&gt;sparklyr&lt;/code&gt; package.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;if (!requireNamespace(&amp;quot;sparklyr&amp;quot;, quietly = TRUE)) {
+  stop(&amp;quot;Package sparklyr needed.&amp;quot;)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will subsequently pass the &lt;code&gt;R CMD check&lt;/code&gt;. Were this an open source package, I could add &lt;code&gt;sparklyr&lt;/code&gt; to the &lt;code&gt;Suggests&lt;/code&gt; field of the &lt;code&gt;DESCRIPTION&lt;/code&gt; file such that users could install the &lt;code&gt;sparklyr&lt;/code&gt; package to get the additional functionality if they wanted it (this is exactly what the &lt;code&gt;fst&lt;/code&gt; package does).&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;So to conclude if you want to include functionality in your code which relies on other packages but are worried about people not having access to those packages, or simply don’t want to force your users to have to install the additional packages, then consider &lt;code&gt;requireNamespace()&lt;/code&gt;. This is a great way of offering additional functionality without the need to clog up user’s libraries.&lt;/p&gt;
+&lt;p&gt;Credit goes to my colleague &lt;a href=&#34;https://twitter.com/jozefhajnala&#34;&gt;Jozef Hajnala&lt;/a&gt; who pointed out this really neat trick!&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>No Visible Binding for Global Variable</title>
+      <link>/2019/08/18/no-visible-binding-for-global-variable/</link>
+      <pubDate>Sun, 18 Aug 2019 21:13:14 -0500</pubDate>
+      
+      <guid>/2019/08/18/no-visible-binding-for-global-variable/</guid>
+      <description>
+
+
+&lt;p&gt;Recently I have been working on a very large legacy project which utilises the excellent &lt;a href=&#34;https://github.com/Rdatatable/data.table&#34;&gt;&lt;code&gt;data.table&lt;/code&gt;&lt;/a&gt; package throughout. What this has resulted in is an &lt;code&gt;R CMD check&lt;/code&gt; containing literally thousands of &lt;code&gt;NOTE&lt;/code&gt;s similar to the following:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  my_fn: no visible binding for global variable ‘mpg’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;There are several reasons why you might see these &lt;code&gt;NOTE&lt;/code&gt;s and, for our code base, some of the &lt;code&gt;NOTE&lt;/code&gt;s were potentially more damaging than others. This was a problem as these &lt;code&gt;NOTE&lt;/code&gt;s were hidden firstly by a suppression of them due to a manipulation of the &lt;code&gt;_R_CHECK_CODETOOLS_PROFILE_&lt;/code&gt; option of the &lt;code&gt;.Renviron&lt;/code&gt; file. Once this was removed we discovered the more damaging &lt;code&gt;NOTE&lt;/code&gt;s were hidden within the sheer amount of &lt;code&gt;NOTE&lt;/code&gt;s we had in the &lt;code&gt;R CMD check&lt;/code&gt;.&lt;/p&gt;
+&lt;div id=&#34;non-standard-evaluation&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Non-standard Evaluation&lt;/h2&gt;
+&lt;p&gt;If we have a function where we are using &lt;code&gt;data.table&lt;/code&gt;’s modification by reference features, i.e. we are using a variable in an unquoted fashion (also known as non-standard evaluation (NSE)) then this issue will occur. Take the following function as an example.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;my_fn &amp;lt;- function() {
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  mtcars[, mpg_div_hp := mpg / hp]
+  mtcars[]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, we would find the following &lt;code&gt;NOTE&lt;/code&gt;s:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  my_fn: no visible binding for global variable ‘mpg_div_hp’
+  my_fn: no visible binding for global variable ‘mpg’
+  my_fn: no visible binding for global variable ‘hp’
+  Undefined global functions or variables:
+    hp mpg mpg_div_hp&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Sometimes you may also see these &lt;code&gt;NOTE&lt;/code&gt;s for syntactic sugar such as &lt;code&gt;!!&lt;/code&gt; or &lt;code&gt;:=&lt;/code&gt; if you haven’t correctly imported the package they come from.&lt;/p&gt;
+&lt;p&gt;This is a &lt;a href=&#34;https://github.com/Rdatatable/data.table/issues/850&#34;&gt;well discussed&lt;/a&gt; issue on the internet which only became an issue after a change introduced to the core R code in version 2.15.1. There are two solutions to this problem.&lt;/p&gt;
+&lt;div id=&#34;option-one&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Option One&lt;/h3&gt;
+&lt;p&gt;Include all variable names within a &lt;code&gt;globalVariables()&lt;/code&gt; call in the package documentation file.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;globalVariables(c(&amp;quot;mpg&amp;quot;, &amp;quot;hp&amp;quot;, &amp;quot;mpg_div_hp&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For our package, as there are literally thousands of variables to list in this file, it makes it very difficult to maintain this list and makes the file very long. If, however, the variables belong to data which are stored within your package then this can be greatly simplified to&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;globalVariables(names(my_data))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You may wish to import any syntactic sugar functionality here as well. For example&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;globalVariables(c(&amp;quot;:=&amp;quot;, &amp;quot;!!&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;option-two&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Option Two&lt;/h3&gt;
+&lt;p&gt;The second option involves binding the variable locally to the function. At the top of your function you can define the variable as a &lt;code&gt;NULL&lt;/code&gt; value.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;my_fn &amp;lt;- function() {
+  mpg &amp;lt;- hp &amp;lt;- mpg_div_hp &amp;lt;- NULL
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  mtcars[, mpg_div_hp := mpg / hp]
+  mtcars[]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Therefore your variable(s) are now bound to object(s) and so the &lt;code&gt;R CMD check&lt;/code&gt; has nothing to complain about. This is the method that the &lt;code&gt;data.table&lt;/code&gt; team &lt;a href=&#34;https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html&#34;&gt;recommend&lt;/a&gt; and to me, feels like a much neater and more importantly maintainable solution than the first option.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;a-note-on-the-tidyverse&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;A Note on the Tidyverse&lt;/h3&gt;
+&lt;p&gt;You may also come across this problem whilst programming using the &lt;code&gt;tidyverse&lt;/code&gt; for which there is a very neat solution. You simply need to be more explicit within your function by using the &lt;a href=&#34;https://cran.r-project.org/web/packages/dplyr/vignettes/programming.html&#34;&gt;&lt;code&gt;.data&lt;/code&gt; pronoun&lt;/a&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#&amp;#39; @importFrom rlang .data
+my_fn &amp;lt;- function() {
+  mtcars %&amp;gt;% 
+    mutate(mpg_div_hp = .data$mpg / .data$hp)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note the import!&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;selecting-variables-with-the-data.table-..-prefix&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Selecting Variables with the &lt;code&gt;data.table&lt;/code&gt; &lt;code&gt;..&lt;/code&gt; Prefix&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;NOTE&lt;/code&gt;s can occur when we are using the &lt;code&gt;..&lt;/code&gt; syntax of &lt;code&gt;data.table&lt;/code&gt;, for example&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;double_dot &amp;lt;- function() {
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  select_cols &amp;lt;- c(&amp;quot;cyl&amp;quot;, &amp;quot;wt&amp;quot;)
+  mtcars[, ..select_cols]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will yield&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  Undefined global functions or variables:
+    ..select_cols&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In this instance, this can be solved by avoiding the &lt;code&gt;..&lt;/code&gt; syntax and using the alternative &lt;code&gt;with = FALSE&lt;/code&gt; notation.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;double_dot &amp;lt;- function() {
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  select_cols &amp;lt;- c(&amp;quot;cyl&amp;quot;, &amp;quot;wt&amp;quot;)
+  mtcars[, select_cols, with = FALSE]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Even though the &lt;code&gt;..&lt;/code&gt; prefix is syntactic sugar, we cannot use &lt;code&gt;globalVariables(c(&#34;..&#34;))&lt;/code&gt; since the actual variable in this case is &lt;code&gt;..select_cols&lt;/code&gt;; we would therefore need to use &lt;code&gt;globalVariables(c(&#34;..select_cols&#34;))&lt;/code&gt; if we wanted to use the &lt;code&gt;globalVariables()&lt;/code&gt; approach.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;missing-imports&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Missing Imports&lt;/h2&gt;
+&lt;p&gt;In our code base, I also found &lt;code&gt;NOTE&lt;/code&gt;s for functions or datasets which were not correctly imported. For example, consider the following simple function.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;Rversion &amp;lt;- function() {
+  info &amp;lt;- sessionInfo()
+  info$R.version
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This gives the following &lt;code&gt;NOTE&lt;/code&gt;s:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  Rversion: no visible global function definition for ‘sessionInfo’
+  Consider adding
+    importFrom(&amp;quot;utils&amp;quot;, &amp;quot;sessionInfo&amp;quot;)
+  to your NAMESPACE file.&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here the &lt;code&gt;R CMD check&lt;/code&gt; is rather helpful and tells us the solution; we need to ensure that we explicitly import the function from the &lt;code&gt;utils&lt;/code&gt; package in the documentation. This can easily be done with the &lt;a href=&#34;https://github.com/r-lib/roxygen2&#34;&gt;&lt;code&gt;roxygen2&lt;/code&gt;&lt;/a&gt; package by including an &lt;code&gt;@importFrom utils sessionInfo&lt;/code&gt; tag.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;trying-to-call-removed-functionality&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Trying to Call Removed Functionality&lt;/h2&gt;
+&lt;p&gt;If you have a function which has been removed from your package but attempt to call it from another function, R will only give you a &lt;code&gt;NOTE&lt;/code&gt; about this.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;use_non_existent_function &amp;lt;- function() {
+  this_function_doesnt_exist()
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will give the &lt;code&gt;NOTE&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  use_non_existent_function: no visible global function definition for
+    ‘this_function_doesnt_exist’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Of course it goes without saying that you should make sure to remove any calls to functions which have been removed from your package. As a side note, when I first started working on the project, I was initially unaware that within our package we had the option &lt;code&gt;_R_CHECK_CODETOOLS_PROFILE_ = &#34;suppressUndefined = TRUE&#34;&lt;/code&gt; set within our &lt;code&gt;.Renviron&lt;/code&gt; file which will suppresses all unbound global variable &lt;code&gt;NOTE&lt;/code&gt;s from appearing in the &lt;code&gt;R CMD check&lt;/code&gt;. However given that this can mask these deeper issues within your package, such as not recognising when a function calls functionality which has been removed from the package. This can end up meaning the end user can face nasty and confusing error messages. Therefore I would not recommend using this setting and would suggest tackling each of your packages &lt;code&gt;NOTE&lt;/code&gt;s individually to remove them all.&lt;/p&gt;
+&lt;p&gt;I actually discovered all of our package &lt;code&gt;NOTE&lt;/code&gt;s when introducing the &lt;a href=&#34;https://github.com/jimhester/lintr&#34;&gt;&lt;code&gt;lintr&lt;/code&gt;&lt;/a&gt; package to our CI pipeline. &lt;code&gt;lintr&lt;/code&gt; will pick up on some – but not all – of these unbound global variable problems (&lt;code&gt;&#39;lintr&lt;/code&gt; of course does not take the &lt;code&gt;_R_CHECK_CODETOOLS_PROFILE_&lt;/code&gt; into account). Take our original function as an example&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;my_fn &amp;lt;- function() {
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  mtcars[, mpg_div_hp := mpg / hp]
+  mtcars[]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, &lt;code&gt;lintr&lt;/code&gt; will highlight the variables &lt;code&gt;mpg&lt;/code&gt; and &lt;code&gt;hp&lt;/code&gt; as problems but it currently won’t highlight the variables on the LHS of &lt;code&gt;:=&lt;/code&gt;, i.e. &lt;code&gt;mpg_div_hp&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;When developing your package, if you are experiencing these unbound global variables &lt;code&gt;NOTE&lt;/code&gt;s you should&lt;/p&gt;
+&lt;ol style=&#34;list-style-type: decimal&#34;&gt;
+&lt;li&gt;Strive to define any unbound variables locally within a function.&lt;/li&gt;
+&lt;li&gt;Ensure that any functions or data from external packages (including &lt;code&gt;utils&lt;/code&gt;, &lt;code&gt;stats&lt;/code&gt;, etc.) have the correct &lt;code&gt;@importFrom&lt;/code&gt; tag&lt;/li&gt;
+&lt;li&gt;Do not suppress this check in the &lt;code&gt;.Renviron&lt;/code&gt; file and the solutions proposed here should remove the current need to do so&lt;/li&gt;
+&lt;li&gt;Any package wide unbound variables, which are typically syntactic sugar (e.g. &lt;code&gt;:=&lt;/code&gt;), should be defined within the package description file inside a &lt;code&gt;globalVariables()&lt;/code&gt; function, which should be a very short and maintainable list.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

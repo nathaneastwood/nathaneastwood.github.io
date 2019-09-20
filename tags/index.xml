@@ -1,0 +1,140 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tags on Random R Ramblings</title>
+    <link>/tags/</link>
+    <description>Recent content in Tags on Random R Ramblings</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <lastBuildDate>Sat, 14 Sep 2019 19:13:14 -0500</lastBuildDate>
+    
+        <atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>data.table</title>
+      <link>/tags/data.table/</link>
+      <pubDate>Sat, 14 Sep 2019 19:13:14 -0500</pubDate>
+      
+      <guid>/tags/data.table/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>rstats</title>
+      <link>/tags/rstats/</link>
+      <pubDate>Sat, 14 Sep 2019 19:13:14 -0500</pubDate>
+      
+      <guid>/tags/rstats/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>dplyr</title>
+      <link>/tags/dplyr/</link>
+      <pubDate>Thu, 05 Sep 2019 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/dplyr/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>fst</title>
+      <link>/tags/fst/</link>
+      <pubDate>Thu, 05 Sep 2019 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/fst/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>namespaces</title>
+      <link>/tags/namespaces/</link>
+      <pubDate>Thu, 05 Sep 2019 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/namespaces/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>sparklyr</title>
+      <link>/tags/sparklyr/</link>
+      <pubDate>Thu, 05 Sep 2019 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/sparklyr/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>tibble</title>
+      <link>/tags/tibble/</link>
+      <pubDate>Thu, 05 Sep 2019 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/tibble/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>project-euler</title>
+      <link>/tags/project-euler/</link>
+      <pubDate>Wed, 28 Feb 2018 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/project-euler/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>R6</title>
+      <link>/tags/r6/</link>
+      <pubDate>Sun, 13 Aug 2017 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/r6/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Travis</title>
+      <link>/tags/travis/</link>
+      <pubDate>Tue, 16 May 2017 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/travis/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>bookdown</title>
+      <link>/tags/bookdown/</link>
+      <pubDate>Tue, 16 May 2017 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/bookdown/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>html-proofer</title>
+      <link>/tags/html-proofer/</link>
+      <pubDate>Tue, 16 May 2017 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/html-proofer/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>magrittr</title>
+      <link>/tags/magrittr/</link>
+      <pubDate>Mon, 21 Nov 2016 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/magrittr/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>pipe</title>
+      <link>/tags/pipe/</link>
+      <pubDate>Mon, 21 Nov 2016 21:13:14 -0500</pubDate>
+      
+      <guid>/tags/pipe/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

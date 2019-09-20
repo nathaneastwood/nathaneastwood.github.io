@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>Piping Within Pipes - Random R Ramblings</title>
+<meta property="og:title" content="Piping Within Pipes - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/nathaneastwood">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/nathaneastwood/">LinkedIn</a></li>
+    
+    <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood">Stack Overflow</a></li>
+    
+    <li><a href="https://twitter.com/nathaneastwood_">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">1 min read</span>
+    
+
+    <h1 class="article-title">Piping Within Pipes</h1>
+
+    
+    <span class="article-date">2016-11-21</span>
+    
+
+    <div class="article-content">
+      
+
+
+<p>The <code>magrittr</code> pipe (<code>%&gt;%</code>) has revolutionised the way many people now write R code. I’ve been using R for over 7 years and the pipe has become a staple of my programming conventions. However it was recently brought to my attention that you can actually use pipes within function calls, which can make my code even more human readable. Take for example the following code.</p>
+<pre class="r"><code>library(forcats)
+library(dplyr)
+gss_cat2 &lt;-
+  gss_cat %&gt;%
+  mutate(marital2 = fct_rev(fct_infreq(marital)))</code></pre>
+<p>Whilst this code is fairly easy to read, you can imagine how this doesn’t scale very nicely with even more nested function calls. One solution would be to use <code>dplyr</code>’s ability to <code>mutate</code> the same column within the <code>mutate</code> function call to split out the code a little more.</p>
+<pre class="r"><code>gss_cat3 &lt;-
+  gss_cat %&gt;%
+  mutate(
+    marital2 = fct_infreq(marital),
+    marital2 = fct_rev(marital2)
+  )</code></pre>
+<p>Sure this is more readable, but it’s repeating far too much code for my liking. So, we can instead just use the pipe.</p>
+<pre class="r"><code>gss_cat4 &lt;-
+  gss_cat %&gt;%
+  mutate(
+    marital2 =
+      marital %&gt;%
+      fct_infreq() %&gt;%
+      fct_rev()
+  )</code></pre>
+<p>This not only eliminates long, nested function calls but it also makes my code much more human readable! Try it yourself.</p>
+<pre class="r"><code>ggplot(gss_cat4) +
+  geom_bar(aes(x = marital2)) +
+  labs(x = &quot;Marital Status&quot;, y = &quot;Count&quot;) +
+  coord_flip()</code></pre>
+<p><img src="/post/2016-11-21-pipes-in-pipes_files/figure-html/barchart-1.png" width="800px" /></p>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

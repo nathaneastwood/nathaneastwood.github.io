@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>Selecting the max value from each group, a case study: data.table - Random R Ramblings</title>
+<meta property="og:title" content="Selecting the max value from each group, a case study: data.table - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/nathaneastwood">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/nathaneastwood/">LinkedIn</a></li>
+    
+    <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood">Stack Overflow</a></li>
+    
+    <li><a href="https://twitter.com/nathaneastwood_">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">5 min read</span>
+    
+
+    <h1 class="article-title">Selecting the max value from each group, a case study: data.table</h1>
+
+    
+    <span class="article-date">2019-09-14</span>
+    
+
+    <div class="article-content">
+      
+<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<script src="/rmarkdown-libs/proj4js/proj4.js"></script>
+<link href="/rmarkdown-libs/highcharts/css/motion.css" rel="stylesheet" />
+<link href="/rmarkdown-libs/highcharts/css/htmlwdgtgrid.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/highcharts/highcharts.js"></script>
+<script src="/rmarkdown-libs/highcharts/highcharts-3d.js"></script>
+<script src="/rmarkdown-libs/highcharts/highcharts-more.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/stock.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/map.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/annotations.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/boost.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/data.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/drag-panes.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/drilldown.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/item-series.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/offline-exporting.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/overlapping-datalabels.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/exporting.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/export-data.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/funnel.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/heatmap.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/treemap.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/sankey.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/solid-gauge.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/streamgraph.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/sunburst.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/vector.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/wordcloud.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/xrange.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/tilemap.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/venn.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/gantt.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/timeline.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/parallel-coordinates.js"></script>
+<script src="/rmarkdown-libs/highcharts/plugins/grouped-categories.js"></script>
+<script src="/rmarkdown-libs/highcharts/plugins/motion.js"></script>
+<script src="/rmarkdown-libs/highcharts/plugins/multicolor_series.js"></script>
+<script src="/rmarkdown-libs/highcharts/custom/reset.js"></script>
+<script src="/rmarkdown-libs/highcharts/custom/symbols-extra.js"></script>
+<script src="/rmarkdown-libs/highcharts/custom/text-symbols.js"></script>
+<script src="/rmarkdown-libs/highchart-binding/highchart.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In my <a href="https://nathaneastwood.github.io/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-base-r/">last post</a> we looked at how to slice a <code>data.frame</code> by group to obtain the rows for which a particular column in that group is at its maximum value sing base R. In this post, we will be taking a look at how to perform this task using <a href="https://github.com/Rdatatable/data.table"><code>data.table</code></a>.</p>
+</div>
+<div id="data.table-solutions" class="section level1">
+<h1><code>data.table</code> Solution(s)</h1>
+<p>For this exercise we will be using <code>datasets::mtcars</code> and so first, we must convert <code>mtcars</code> to a <code>data.table</code>.</p>
+<pre class="r"><code>library(data.table)
+mtcars_colnames &lt;- colnames(mtcars)
+mtcars[, &quot;car&quot;] &lt;- rownames(mtcars)
+mtcars &lt;- mtcars[, c(&quot;car&quot;, mtcars_colnames)]
+mtcars &lt;- as.data.table(mtcars)</code></pre>
+<p>The current <code>data.table</code> syntax suggests that when grouping data, we should use the <code>.SD</code> syntax. <code>.SD</code> stands for “<code>S</code>ubset of <code>D</code>ata.table”, so when we group the data <code>by</code> a variable, we are creating subsets of the data. Note that there’s <a href="https://stackoverflow.com/a/8509301/3759418">no significance</a> to the initial <code>.</code>, except that it makes it slightly more unlikely that there will be a clash with a user-defined column name. So, one approach to solving our problem can be seen below.</p>
+<pre class="r"><code>mtcars[, .SD[which.max(mpg)], by = cyl]
+#    cyl              car  mpg  disp  hp drat    wt  qsec vs am gear carb
+# 1:   6   Hornet 4 Drive 21.4 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 2:   4   Toyota Corolla 33.9  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 3:   8 Pontiac Firebird 19.2 400.0 175 3.08 3.845 17.05  0  0    3    2</code></pre>
+<p>So this code essentially treats <code>.SD</code> as a “group”, one for each cylinder level (<code>by</code>), and subsets the row by the index where <code>mpg</code> is at its maximum.</p>
+<p>However this wasn’t always the case with <code>data.table</code>, there is some legacy syntax which is still valid within the package. If we take a look at the following code, we will see that we can obtain the row where <code>mpg</code> is at its maximum using the <code>.I</code> syntax.</p>
+<pre class="r"><code>mtcars[, .I[which.max(mpg)]]
+# [1] 20</code></pre>
+<p>In other words, here <code>.I</code> is a vector representing the row number where <code>mpg</code> is at its maximum in the original <code>data.table</code>. Now consider the case where we look at this by each cylinder group; we obtain a <code>data.table</code> whose column <code>V1</code> represents the row indices for each cylinder group where <code>mpg</code> is at its maximum, i.e. one row for each group.</p>
+<pre class="r"><code>mtcars[, .I[which.max(mpg)], by = cyl]
+#    cyl V1
+# 1:   6  4
+# 2:   4 20
+# 3:   8 25</code></pre>
+<p>So using this <code>data.table</code> we can subset on the column <code>V1</code> to extract these row indices and subset the original <code>data.table</code> for those rows.</p>
+<pre class="r"><code>mtcars[mtcars[, .I[which.max(mpg)], by = cyl]$V1]
+#                 car  mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# 1:   Hornet 4 Drive 21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 2:   Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 3: Pontiac Firebird 19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2</code></pre>
+<p>The final way in which we could solve this problem with <code>data.table</code> is in fact very similar to the base R approach that we saw in the previous post. This involves <code>split</code>ting the <code>data.table</code> into three separate <code>data.table</code>s, one for each cylinder group, and applying a function to each group that finds the index of the maximum row, subsetting the grouped <code>data.table</code> on that index. We then bind these lists together using the <code>data.table::rbindlist()</code> function. In fact, we could have even used the <code>do.call(rbind, .)</code> approach we saw in the first post.</p>
+<pre class="r"><code>rbindlist(lapply(split(mtcars, mtcars[, cyl]), function(x) x[which.max(mpg)]))
+#                 car  mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# 1:   Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 2:   Hornet 4 Drive 21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 3: Pontiac Firebird 19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2</code></pre>
+<p>So there we have it, three separate ways to solve the same problem using <code>data.table</code>.</p>
+</div>
+<div id="benchmarks" class="section level1">
+<h1>Benchmarks</h1>
+<p>Now this wouldn’t be a completely informative blog post without some benchmarks. In fact these three options are what inspired me to write this series of posts. We can see the results of the benchmarking below.</p>
+<div id="htmlwidget-1" style="width:100%;height:500px;" class="highchart html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"hc_opts":{"title":{"text":"<b>data.table Solutions<b>"},"yAxis":{"title":{"text":"<b> Time (ns)<b>"}},"credits":{"enabled":false},"exporting":{"enabled":false},"plotOptions":{"series":{"label":{"enabled":false},"turboThreshold":0,"marker":{"symbol":"circle"},"showInLegend":false},"treemap":{"layoutAlgorithm":"squarified"}},"chart":{"type":"column"},"xAxis":{"type":"category","categories":""},"series":[{"g2":null,"data":[{"name":".SD","low":657449,"q1":719847.5,"median":845022.5,"q3":918745.5,"high":1203749},{"name":".I","low":439345,"q1":478373.5,"median":505032.5,"q3":592551,"high":696226},{"name":"rbindlist","low":1072451,"q1":1198851,"median":1425840,"q3":1562830.5,"high":1994344}],"type":"boxplot","id":null,"name":"Solution","color":"#6272a4","fillColor":"#f8f8f2","lineWidth":1.5}]},"theme":{"chart":{"backgroundColor":"transparent"}},"conf_opts":{"global":{"Date":null,"VMLRadialGradientURL":"http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png","canvasToolsURL":"http =//code.highcharts.com/list(version)/modules/canvas-tools.js","getTimezoneOffset":null,"timezoneOffset":0,"useUTC":true},"lang":{"contextButtonTitle":"Chart context menu","decimalPoint":".","downloadJPEG":"Download JPEG image","downloadPDF":"Download PDF document","downloadPNG":"Download PNG image","downloadSVG":"Download SVG vector image","drillUpText":"Back to {series.name}","invalidDate":null,"loading":"Loading...","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"noData":"No data to display","numericSymbols":["k","M","G","T","P","E"],"printChart":"Print chart","resetZoom":"Reset zoom","resetZoomTitle":"Reset zoom level 1:1","shortMonths":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"thousandsSep":" ","weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]}},"type":"chart","fonts":[],"debug":false},"evals":[],"jsHooks":[]}</script>
+<p>We can see that, on average, the <code>.I</code> solution is fastest. So you may be wondering, if the <code>.SD</code> syntax is the newer syntax, why then is the <code>.I</code> code quicker? Well it’s simply because <code>.SD</code> has <a href="https://github.com/Rdatatable/data.table/issues/735">not yet been completely optimised</a>. <code>.I</code> avoids constructing <code>.SD</code>, which is the bottleneck in the <code>.SD</code> solution.</p>
+<p>As a side note, we could speed these results up even more with <code>data.table::setkey(mtcars, cyl)</code>. I won’t show the benchmarking results here as the data is so small it isn’t really a useful representation but it is worth considering should you need to perform a similar task on a larger dataset.</p>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>If you need to apply some function to each group within a <code>data.table</code>, <code>data.table</code> has many solutions. The newest solution, <code>.SD</code>, may not always be the fastest approach and you should try the old <code>.I</code> approach if speed is important.</p>
+<p>Are you aware of any other <code>data.table</code> solutions to this problem? If so, let me know in the comments!</p>
+<p>Next time, we will take a look at how to solve this problem in <code>dplyr</code> as well as <code>sparklyr</code>.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

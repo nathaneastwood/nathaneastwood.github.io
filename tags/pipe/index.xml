@@ -1,0 +1,54 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>pipe on Random R Ramblings</title>
+    <link>/tags/pipe/</link>
+    <description>Recent content in pipe on Random R Ramblings</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <lastBuildDate>Mon, 21 Nov 2016 21:13:14 -0500</lastBuildDate>
+    
+        <atom:link href="/tags/pipe/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Piping Within Pipes</title>
+      <link>/2016/11/21/piping-within-pipes/</link>
+      <pubDate>Mon, 21 Nov 2016 21:13:14 -0500</pubDate>
+      
+      <guid>/2016/11/21/piping-within-pipes/</guid>
+      <description>
+
+
+&lt;p&gt;The &lt;code&gt;magrittr&lt;/code&gt; pipe (&lt;code&gt;%&amp;gt;%&lt;/code&gt;) has revolutionised the way many people now write R code. I’ve been using R for over 7 years and the pipe has become a staple of my programming conventions. However it was recently brought to my attention that you can actually use pipes within function calls, which can make my code even more human readable. Take for example the following code.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(forcats)
+library(dplyr)
+gss_cat2 &amp;lt;-
+  gss_cat %&amp;gt;%
+  mutate(marital2 = fct_rev(fct_infreq(marital)))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Whilst this code is fairly easy to read, you can imagine how this doesn’t scale very nicely with even more nested function calls. One solution would be to use &lt;code&gt;dplyr&lt;/code&gt;’s ability to &lt;code&gt;mutate&lt;/code&gt; the same column within the &lt;code&gt;mutate&lt;/code&gt; function call to split out the code a little more.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;gss_cat3 &amp;lt;-
+  gss_cat %&amp;gt;%
+  mutate(
+    marital2 = fct_infreq(marital),
+    marital2 = fct_rev(marital2)
+  )&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Sure this is more readable, but it’s repeating far too much code for my liking. So, we can instead just use the pipe.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;gss_cat4 &amp;lt;-
+  gss_cat %&amp;gt;%
+  mutate(
+    marital2 =
+      marital %&amp;gt;%
+      fct_infreq() %&amp;gt;%
+      fct_rev()
+  )&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This not only eliminates long, nested function calls but it also makes my code much more human readable! Try it yourself.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;ggplot(gss_cat4) +
+  geom_bar(aes(x = marital2)) +
+  labs(x = &amp;quot;Marital Status&amp;quot;, y = &amp;quot;Count&amp;quot;) +
+  coord_flip()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2016-11-21-pipes-in-pipes_files/figure-html/barchart-1.png&#34; width=&#34;800px&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

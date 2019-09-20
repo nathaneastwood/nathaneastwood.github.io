@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>The Twitter Waterflow Problem - Random R Ramblings</title>
+<meta property="og:title" content="The Twitter Waterflow Problem - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/nathaneastwood">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/nathaneastwood/">LinkedIn</a></li>
+    
+    <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood">Stack Overflow</a></li>
+    
+    <li><a href="https://twitter.com/nathaneastwood_">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">8 min read</span>
+    
+
+    <h1 class="article-title">The Twitter Waterflow Problem</h1>
+
+    
+    <span class="article-date">2017-08-09</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>I was recently introduced to the <a href="http://chrisdone.com/posts/twitter-problem-loeb">Twitter Waterflow Problem</a> and I decided it was interesting enough to try and complete the challenge in R. Consider the following picture:</p>
+<p><img src="/post/2017-08-09-twitter-waterflow-problem_files/figure-html/unfilled-1.png" width="800px" /></p>
+<p>This plot shows a series of walls and empty valleys. We can represent this picture by an array of integers, where the value at each index is the height of the wall. So in this case, the array of integers can be defined as:</p>
+<pre class="r"><code>wall &lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)</code></pre>
+<p>Now imagine it rains. How much water is going to be accumulated in puddles between walls? No puddles are formed at edges of the wall and water is considered to simply run off the edge. We count volume in square blocks of 1×1. Thus, we are left with a puddle between column 2 and column 7 and the volume is 10.</p>
+</div>
+<div id="the-approach" class="section level2">
+<h2>The Approach</h2>
+<p>The approach I took was one of many ways you could solve this problem. I chose to treat each column (wall) as an index and then for each index I implement a loop:</p>
+<ul>
+<li>Find the height of the current index</li>
+<li>Find the maximum height of the walls to the left of the current index</li>
+<li>Find the maximum height of the walls to the right of the index</li>
+</ul>
+<p>I then work out what the smallest maximum height is between the maximum heights to the left and right of the current index. If this smallest height minus the current index height is greater than zero, then I know how many blocks will fill with water for the current index. Of course, if the smallest maximum height to the left or right is less than the current height, then I get the run off. Converting this to code looks like this:</p>
+<pre class="r"><code>len &lt;- length(wall)
+# pre-allocate memory to make the loop more efficient
+water &lt;- rep(0, len)
+for (i in seq_along(wall)) {
+  currentHeight &lt;- wall[i]
+  maxLeftHeight &lt;- if (i &gt; 1) {
+    max(wall[1:(i - 1)])
+  } else {
+    0
+  }
+  maxRightHeight &lt;- if (i == len) {
+    0
+  } else {
+    max(wall[(i + 1):len])
+  }
+  smallestMaxHeight &lt;- min(maxLeftHeight, maxRightHeight)
+  water[i] &lt;- if (smallestMaxHeight - currentHeight &gt; 0) {
+    smallestMaxHeight - currentHeight
+  } else {
+    0
+  }
+}
+water
+# [1] 0 0 4 3 2 1 0 0 0</code></pre>
+<p>This returns a vector of the number of blocks of water at each index.</p>
+</div>
+<div id="the-r6-class" class="section level2">
+<h2>The R6 Class</h2>
+<p>For this problem I chose to use the <a href="https://github.com/r-lib/R6"><code>R6</code></a> class system because it is very self contained. The <code>R6</code> class system is different from the functional <code>S3</code> and <code>S4</code> class systems found in base R in that it is an encapsulated class system. Some key differences between the two are:</p>
+<p><strong>Functional:</strong></p>
+<ul>
+<li>Objects contain data</li>
+<li>Class methods are separate from objects</li>
+<li>Objects are immutable - they cannot be changed after they have been created</li>
+</ul>
+<p><strong>Encapsulated:</strong></p>
+<ul>
+<li>Objects contain methods and data</li>
+<li>Objects are mutable</li>
+</ul>
+<p>Winston Chang details these differences very well in his <a href="https://channel9.msdn.com/Events/useR-international-R-User-conferences/useR-International-R-User-2017-Conference/The-R6-Class-System">userR!2017 talk</a>.</p>
+<p>I wanted the user to be able to acquire two key pieces of information: the total blocks of water and the filled plot. I therefore created three <code>public</code> methods inside an <code>R6</code> class and placed the class in a simple package which can be found <a href="https://github.com/nathaneastwood/waterflow">here</a>. <code>public</code> methods are a list of functions (and/or non-functions) which are essentially methods (or data) of the class that are intended to be used by the user of the class.</p>
+<p>When writing a new <code>R6</code> class, we often want to perform some initial functionality when we instantiate an object of this class. This is true in our case as when we instantiate a new object of class <code>waterflow</code>, we want it to calculate the heights of the water straight away. We therefore call our earlier function <code>initialize</code> and place it inside the <code>public</code> list.</p>
+<pre class="r"><code>initialize = function(wall = NULL) {
+  if (is.null(wall)) {
+    stop(&quot;Please provide some wall heights&quot;)
+  }
+  if (!is.numeric(wall)) {
+    stop(&quot;Please provide a numeric vector&quot;)
+  }
+  len &lt;- length(wall)
+  water &lt;- rep(0, len)
+  for (i in seq_along(wall)) {
+    currentHeight &lt;- wall[i]
+    maxLeftHeight &lt;- if (i &gt; 1) {
+      max(wall[1:(i - 1)])
+    } else {
+      0
+    }
+    maxRightHeight &lt;- if (i == len) {
+      0
+    } else {
+      max(wall[(i + 1):len])
+    }
+    smallestMaxHeight &lt;- min(maxLeftHeight, maxRightHeight)
+    water[i] &lt;- if (smallestMaxHeight - currentHeight &gt; 0) {
+      smallestMaxHeight - currentHeight
+    } else {
+      0
+    }
+  }
+  private$heights &lt;- private$tidyWater(water, wall)
+}</code></pre>
+<p>Note, we have one key difference here, we are assigning the results to members of the <code>private</code> list within our object. Once we have calculated our <code>water</code> heights, we use them along with our <code>wall</code> heights in the function <code>private$tidyWater()</code> and assign the resulting <code>data.frame</code> to <code>private$heights</code>. The <code>private</code> argument is a list which contains methods (and/or data) which are internal to the class and are not intended to be used by the user. We do similar things when writing packages - we explicitly export the functionality we want other people to use and don’t export functionality that is only used within the package itself.</p>
+<p>So to use the class, first we instantiate the class with some data in a call to <code>$new()</code> which in turn runs the above <code>initialize</code> function.</p>
+<pre class="r"><code>library(waterflow)
+wall &lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)
+p &lt;- waterflow$new(wall)</code></pre>
+<p>So now we have an object called <code>p</code> which is of class <code>waterflow</code> (and <code>R6</code>). <code>p</code> contains the data, as well as the (<code>public</code>) methods we can perform on that data.</p>
+<p>Typically when we return <code>p</code>, <code>R6</code> objects have a default <code>print</code> method that lists all members of the object but here there is a custom <code>$print()</code> function that returns <code>heights</code>.</p>
+<pre class="r"><code>p
+#    pos  type val
+# 1    1 water   0
+# 2    2 water   0
+# 3    3 water   4
+# 4    4 water   3
+# 5    5 water   2
+# 6    6 water   1
+# 7    7 water   0
+# 8    8 water   0
+# 9    9 water   0
+# 10   1  wall   2
+# 11   2  wall   5
+# 12   3  wall   1
+# 13   4  wall   2
+# 14   5  wall   3
+# 15   6  wall   4
+# 16   7  wall   7
+# 17   8  wall   7
+# 18   9  wall   6</code></pre>
+<p>We can still return the members of the object by looking at the structure of <code>p</code>.</p>
+<pre class="r"><code>str(p)
+# Classes &#39;waterflow&#39;, &#39;R6&#39; &lt;waterflow&gt;
+#   Public:
+#     clone: function (deep = FALSE) 
+#     initialize: function (wall = NULL) 
+#     plot: function () 
+#     print: function () 
+#     total: function () 
+#   Private:
+#     heights: data.frame
+#     tidyWater: function (water, wall)</code></pre>
+<p>To calculate the total water that fills the valleys, we sum over the <code>heights</code> object for the values of the <code>water</code>.</p>
+<pre class="r"><code>total = function() {
+  sum(private$heights[private$heights$type %in% &quot;water&quot;, &quot;val&quot;])
+}</code></pre>
+<p>Calling the <code>public</code> method <code>$total()</code> gives the expected result.</p>
+<pre class="r"><code>p$total()
+# [1] 10</code></pre>
+<p>To call the plot, we access the <code>public</code> method <code>$plot()</code>.</p>
+<pre class="r"><code>p$plot()</code></pre>
+<p><img src="/post/2017-08-09-twitter-waterflow-problem_files/figure-html/plotCall-1.png" width="800px" /></p>
+<p>The completed class looks like this</p>
+<pre class="r"><code>waterflow &lt;- R6Class(
+  &quot;waterflow&quot;,
+  public = list(
+    initialize = function(wall = NULL) {
+      if (is.null(wall)) {
+        stop(&quot;Please provide some wall heights&quot;)
+      }
+      if (!is.numeric(wall)) {
+        stop(&quot;Please provide a numeric vector&quot;)
+      }
+      len &lt;- length(wall)
+      water &lt;- rep(0, len)
+      for (i in seq_along(wall)) {
+        currentHeight &lt;- wall[i]
+        maxLeftHeight &lt;- if (i &gt; 1) {
+          max(wall[1:(i - 1)])
+        } else {
+          0
+        }
+        maxRightHeight &lt;- if (i == len) {
+          0
+        } else {
+          max(wall[(i + 1):len])
+        }
+        smallestMaxHeight &lt;- min(maxLeftHeight, maxRightHeight)
+        water[i] &lt;- if (smallestMaxHeight - currentHeight &gt; 0) {
+          smallestMaxHeight - currentHeight
+        } else {
+          0
+        }
+      }
+      private$heights &lt;- private$tidyWater(water, wall)
+    },
+    plot = function() {
+      ggplot(private$heights) +
+        geom_col(
+          aes(x = pos + 1 / 2, y = val, fill = type),
+          width = 1, show.legend = FALSE
+        ) +
+        scale_fill_manual(values = c(&quot;dodgerblue2&quot;, &quot;grey50&quot;)) +
+        scale_x_continuous(breaks = seq(0, max(private$heights$pos), 1)) +
+        theme(
+          panel.background = element_blank(),
+          panel.ontop = TRUE,
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_line(colour = &quot;white&quot;, size = 0.5),
+          panel.grid.major.x = element_line(colour = &quot;white&quot;, size = 0.5),
+          panel.grid.major.y = element_line(colour = &quot;white&quot;, size = 0.5),
+          axis.ticks = element_blank(),
+          text = element_blank()
+        )
+    },
+    print = function() print(private$heights),
+    total = function() {
+      sum(private$heights[private$heights$type %in% &quot;water&quot;, &quot;val&quot;])
+    }
+  ),
+  private = list(
+    heights = NULL,
+    tidyWater = function(water, wall) {
+      data.frame(
+        pos = seq_along(wall),
+        type = factor(
+          rep(c(&quot;water&quot;, &quot;wall&quot;), each = length(wall)),
+          levels = c(&quot;water&quot;, &quot;wall&quot;)
+        ),
+        val = c(water, wall)
+      )
+    }
+  )
+)</code></pre>
+<div id="disadvantages-of-r6" class="section level3">
+<h3>Disadvantages of R6</h3>
+<p>Overall <code>R6</code> is a great package with one or two downsides but these are mostly not too worrying. For one thing, <code>R6</code> is a separate package that users have to load or use as an import but given that it is such a lightweight package and doesn’t have any imports of its own, it’s nothing to be concerned about. Also, <code>R6</code> doesn’t have any strict type checking but this is remedied by including your own type checking in your methods. The main bug bear I have with <code>R6</code> is the lack of support from <a href="https://github.com/klutometis/roxygen"><code>Roxygen2</code></a> out of the box and this has been an <a href="https://github.com/klutometis/roxygen/issues/388">open issue</a> for a while.</p>
+<p>Also posted on the <a href="https://www.mango-solutions.com/blog/the-twitter-waterflow-problem">Mango Solutions blog</a>.</p>
+</div>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

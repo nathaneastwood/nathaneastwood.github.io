@@ -1,0 +1,1002 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Random R Ramblings</title>
+    <link>/</link>
+    <description>Recent content on Random R Ramblings</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <lastBuildDate>Sat, 14 Sep 2019 19:13:14 -0500</lastBuildDate>
+    
+        <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Selecting the max value from each group, a case study: data.table</title>
+      <link>/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-data.table/</link>
+      <pubDate>Sat, 14 Sep 2019 19:13:14 -0500</pubDate>
+      
+      <guid>/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-data.table/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/htmlwidgets/htmlwidgets.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/jquery/jquery.min.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/proj4js/proj4.js&#34;&gt;&lt;/script&gt;
+&lt;link href=&#34;/rmarkdown-libs/highcharts/css/motion.css&#34; rel=&#34;stylesheet&#34; /&gt;
+&lt;link href=&#34;/rmarkdown-libs/highcharts/css/htmlwdgtgrid.css&#34; rel=&#34;stylesheet&#34; /&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-3d.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-more.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/stock.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/map.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/annotations.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/boost.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/data.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drag-panes.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drilldown.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/item-series.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/offline-exporting.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/overlapping-datalabels.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/exporting.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/export-data.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/funnel.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/heatmap.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/treemap.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sankey.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/solid-gauge.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/streamgraph.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sunburst.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/vector.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/wordcloud.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/xrange.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/tilemap.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/venn.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/gantt.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/timeline.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/parallel-coordinates.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/grouped-categories.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/motion.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/multicolor_series.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/reset.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/symbols-extra.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/text-symbols.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highchart-binding/highchart.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;In my &lt;a href=&#34;https://nathaneastwood.github.io/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-base-r/&#34;&gt;last post&lt;/a&gt; we looked at how to slice a &lt;code&gt;data.frame&lt;/code&gt; by group to obtain the rows for which a particular column in that group is at its maximum value sing base R. In this post, we will be taking a look at how to perform this task using &lt;a href=&#34;https://github.com/Rdatatable/data.table&#34;&gt;&lt;code&gt;data.table&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;data.table-solutions&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;&lt;code&gt;data.table&lt;/code&gt; Solution(s)&lt;/h1&gt;
+&lt;p&gt;For this exercise we will be using &lt;code&gt;datasets::mtcars&lt;/code&gt; and so first, we must convert &lt;code&gt;mtcars&lt;/code&gt; to a &lt;code&gt;data.table&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(data.table)
+mtcars_colnames &amp;lt;- colnames(mtcars)
+mtcars[, &amp;quot;car&amp;quot;] &amp;lt;- rownames(mtcars)
+mtcars &amp;lt;- mtcars[, c(&amp;quot;car&amp;quot;, mtcars_colnames)]
+mtcars &amp;lt;- as.data.table(mtcars)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The current &lt;code&gt;data.table&lt;/code&gt; syntax suggests that when grouping data, we should use the &lt;code&gt;.SD&lt;/code&gt; syntax. &lt;code&gt;.SD&lt;/code&gt; stands for “&lt;code&gt;S&lt;/code&gt;ubset of &lt;code&gt;D&lt;/code&gt;ata.table”, so when we group the data &lt;code&gt;by&lt;/code&gt; a variable, we are creating subsets of the data. Note that there’s &lt;a href=&#34;https://stackoverflow.com/a/8509301/3759418&#34;&gt;no significance&lt;/a&gt; to the initial &lt;code&gt;.&lt;/code&gt;, except that it makes it slightly more unlikely that there will be a clash with a user-defined column name. So, one approach to solving our problem can be seen below.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars[, .SD[which.max(mpg)], by = cyl]
+#    cyl              car  mpg  disp  hp drat    wt  qsec vs am gear carb
+# 1:   6   Hornet 4 Drive 21.4 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 2:   4   Toyota Corolla 33.9  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 3:   8 Pontiac Firebird 19.2 400.0 175 3.08 3.845 17.05  0  0    3    2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So this code essentially treats &lt;code&gt;.SD&lt;/code&gt; as a “group”, one for each cylinder level (&lt;code&gt;by&lt;/code&gt;), and subsets the row by the index where &lt;code&gt;mpg&lt;/code&gt; is at its maximum.&lt;/p&gt;
+&lt;p&gt;However this wasn’t always the case with &lt;code&gt;data.table&lt;/code&gt;, there is some legacy syntax which is still valid within the package. If we take a look at the following code, we will see that we can obtain the row where &lt;code&gt;mpg&lt;/code&gt; is at its maximum using the &lt;code&gt;.I&lt;/code&gt; syntax.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars[, .I[which.max(mpg)]]
+# [1] 20&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In other words, here &lt;code&gt;.I&lt;/code&gt; is a vector representing the row number where &lt;code&gt;mpg&lt;/code&gt; is at its maximum in the original &lt;code&gt;data.table&lt;/code&gt;. Now consider the case where we look at this by each cylinder group; we obtain a &lt;code&gt;data.table&lt;/code&gt; whose column &lt;code&gt;V1&lt;/code&gt; represents the row indices for each cylinder group where &lt;code&gt;mpg&lt;/code&gt; is at its maximum, i.e. one row for each group.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars[, .I[which.max(mpg)], by = cyl]
+#    cyl V1
+# 1:   6  4
+# 2:   4 20
+# 3:   8 25&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So using this &lt;code&gt;data.table&lt;/code&gt; we can subset on the column &lt;code&gt;V1&lt;/code&gt; to extract these row indices and subset the original &lt;code&gt;data.table&lt;/code&gt; for those rows.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars[mtcars[, .I[which.max(mpg)], by = cyl]$V1]
+#                 car  mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# 1:   Hornet 4 Drive 21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 2:   Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 3: Pontiac Firebird 19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The final way in which we could solve this problem with &lt;code&gt;data.table&lt;/code&gt; is in fact very similar to the base R approach that we saw in the previous post. This involves &lt;code&gt;split&lt;/code&gt;ting the &lt;code&gt;data.table&lt;/code&gt; into three separate &lt;code&gt;data.table&lt;/code&gt;s, one for each cylinder group, and applying a function to each group that finds the index of the maximum row, subsetting the grouped &lt;code&gt;data.table&lt;/code&gt; on that index. We then bind these lists together using the &lt;code&gt;data.table::rbindlist()&lt;/code&gt; function. In fact, we could have even used the &lt;code&gt;do.call(rbind, .)&lt;/code&gt; approach we saw in the first post.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;rbindlist(lapply(split(mtcars, mtcars[, cyl]), function(x) x[which.max(mpg)]))
+#                 car  mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# 1:   Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 2:   Hornet 4 Drive 21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 3: Pontiac Firebird 19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So there we have it, three separate ways to solve the same problem using &lt;code&gt;data.table&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;benchmarks&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Benchmarks&lt;/h1&gt;
+&lt;p&gt;Now this wouldn’t be a completely informative blog post without some benchmarks. In fact these three options are what inspired me to write this series of posts. We can see the results of the benchmarking below.&lt;/p&gt;
+&lt;div id=&#34;htmlwidget-1&#34; style=&#34;width:100%;height:500px;&#34; class=&#34;highchart html-widget&#34;&gt;&lt;/div&gt;
+&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;chart&#34;:{&#34;type&#34;:&#34;column&#34;},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;.SD&#34;,&#34;low&#34;:657449,&#34;q1&#34;:719847.5,&#34;median&#34;:845022.5,&#34;q3&#34;:918745.5,&#34;high&#34;:1203749},{&#34;name&#34;:&#34;.I&#34;,&#34;low&#34;:439345,&#34;q1&#34;:478373.5,&#34;median&#34;:505032.5,&#34;q3&#34;:592551,&#34;high&#34;:696226},{&#34;name&#34;:&#34;rbindlist&#34;,&#34;low&#34;:1072451,&#34;q1&#34;:1198851,&#34;median&#34;:1425840,&#34;q3&#34;:1562830.5,&#34;high&#34;:1994344}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;}},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
+&lt;p&gt;We can see that, on average, the &lt;code&gt;.I&lt;/code&gt; solution is fastest. So you may be wondering, if the &lt;code&gt;.SD&lt;/code&gt; syntax is the newer syntax, why then is the &lt;code&gt;.I&lt;/code&gt; code quicker? Well it’s simply because &lt;code&gt;.SD&lt;/code&gt; has &lt;a href=&#34;https://github.com/Rdatatable/data.table/issues/735&#34;&gt;not yet been completely optimised&lt;/a&gt;. &lt;code&gt;.I&lt;/code&gt; avoids constructing &lt;code&gt;.SD&lt;/code&gt;, which is the bottleneck in the &lt;code&gt;.SD&lt;/code&gt; solution.&lt;/p&gt;
+&lt;p&gt;As a side note, we could speed these results up even more with &lt;code&gt;data.table::setkey(mtcars, cyl)&lt;/code&gt;. I won’t show the benchmarking results here as the data is so small it isn’t really a useful representation but it is worth considering should you need to perform a similar task on a larger dataset.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;If you need to apply some function to each group within a &lt;code&gt;data.table&lt;/code&gt;, &lt;code&gt;data.table&lt;/code&gt; has many solutions. The newest solution, &lt;code&gt;.SD&lt;/code&gt;, may not always be the fastest approach and you should try the old &lt;code&gt;.I&lt;/code&gt; approach if speed is important.&lt;/p&gt;
+&lt;p&gt;Are you aware of any other &lt;code&gt;data.table&lt;/code&gt; solutions to this problem? If so, let me know in the comments!&lt;/p&gt;
+&lt;p&gt;Next time, we will take a look at how to solve this problem in &lt;code&gt;dplyr&lt;/code&gt; as well as &lt;code&gt;sparklyr&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Selecting the max value from each group, a case study: base R</title>
+      <link>/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-base-r/</link>
+      <pubDate>Sat, 14 Sep 2019 18:13:14 -0500</pubDate>
+      
+      <guid>/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-base-r/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/htmlwidgets/htmlwidgets.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/jquery/jquery.min.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/proj4js/proj4.js&#34;&gt;&lt;/script&gt;
+&lt;link href=&#34;/rmarkdown-libs/highcharts/css/motion.css&#34; rel=&#34;stylesheet&#34; /&gt;
+&lt;link href=&#34;/rmarkdown-libs/highcharts/css/htmlwdgtgrid.css&#34; rel=&#34;stylesheet&#34; /&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-3d.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-more.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/stock.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/map.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/annotations.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/boost.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/data.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drag-panes.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drilldown.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/item-series.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/offline-exporting.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/overlapping-datalabels.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/exporting.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/export-data.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/funnel.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/heatmap.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/treemap.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sankey.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/solid-gauge.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/streamgraph.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sunburst.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/vector.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/wordcloud.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/xrange.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/tilemap.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/venn.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/gantt.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/timeline.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/parallel-coordinates.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/grouped-categories.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/motion.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/multicolor_series.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/reset.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/symbols-extra.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/text-symbols.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highchart-binding/highchart.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Let’s say we wish to group some data by a variable, then for each group we wish to find the row of the maximum value of another variable, and then finally extract the entire row. This is a fairly common task and in fact I’ve had to do this exact data exploration technique on several occasions in the last week using different syntax, &lt;code&gt;data.table&lt;/code&gt; and &lt;code&gt;sparklyr&lt;/code&gt;; so I thought I would share my code with you so you can compare the different options. In fact for this blog entry, I will be using base R before looking at &lt;code&gt;data.table&lt;/code&gt;, &lt;code&gt;dplyr&lt;/code&gt; and &lt;code&gt;sparklyr&lt;/code&gt; in subsequent posts.&lt;/p&gt;
+&lt;p&gt;For this exercise, I will be using the classic &lt;code&gt;datasets::mtcars&lt;/code&gt; data. The aim here is to find the row for each cylinder group (&lt;code&gt;cyl&lt;/code&gt;) where the miles per gallon (&lt;code&gt;mpg&lt;/code&gt;) value is at its highest. I am not interested in finding multiple rows, I just want one row for each group even if there are cars which share the same &lt;code&gt;mpg&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;base-r-solution&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Base R Solution&lt;/h1&gt;
+&lt;p&gt;For this blog entry, I am going to look at using base R. This is a classic &lt;code&gt;split()&lt;/code&gt; + &lt;code&gt;lapply()&lt;/code&gt; problem. First I’ll do some pre-processing to &lt;code&gt;mtcars&lt;/code&gt; just so that we can see which cars have the maximum mpg for each cylinder group.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# Create a column of car names
+mtcars_colnames &amp;lt;- colnames(mtcars)
+mtcars[, &amp;quot;car&amp;quot;] &amp;lt;- rownames(mtcars)
+mtcars &amp;lt;- mtcars[, c(&amp;quot;car&amp;quot;, mtcars_colnames)]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we can find the rows we want.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;max_mpg &amp;lt;- do.call(rbind, lapply(
+  # Split the data into groups for each cylinder
+  split(mtcars, mtcars[, &amp;quot;cyl&amp;quot;]),
+  function(x) {
+    # For the group `x`, select the row which has the maximum mpg
+    x[which.max(x[, &amp;quot;mpg&amp;quot;]), ]
+  }
+))
+rownames(max_mpg) &amp;lt;- NULL
+max_mpg
+#                car  mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# 1   Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 2   Hornet 4 Drive 21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 3 Pontiac Firebird 19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So what we did here is &lt;code&gt;split()&lt;/code&gt; the &lt;code&gt;data.frame&lt;/code&gt; into separate lists, one for each cylinder group, and then used &lt;code&gt;lapply()&lt;/code&gt; (list apply) to apply a function which, for each group, selects the row which has the maximum mpg. Finally we &lt;code&gt;rbind()&lt;/code&gt; each list back together into a &lt;code&gt;data.frame&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;You may be curious about my use of &lt;code&gt;which.max(x[, &#34;mpg&#34;])&lt;/code&gt; over say &lt;code&gt;mtcars[mtcars$mpg == max(mtcars$mpg), ]&lt;/code&gt;, well it’s because the former will only return a single row, whereas the latter will return multiple matching rows (check out &lt;code&gt;?which.max&lt;/code&gt;) and in this instance I was only interested in a single row for each group.&lt;/p&gt;
+&lt;p&gt;Another approach for base R is to use the &lt;code&gt;by&lt;/code&gt; function.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;do.call(rbind, by(datasets::mtcars, mtcars$cyl, function(x) x[which.max(x$mpg), ]))
+#    mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# 4 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 6 21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 8 19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This acts in a similar way to the &lt;code&gt;split&lt;/code&gt; + &lt;code&gt;lapply&lt;/code&gt; approach in that the &lt;code&gt;data.frame&lt;/code&gt; is split by row into &lt;code&gt;data.frame&lt;/code&gt;s subset by the values of one or more factors, in this case &lt;code&gt;cyl&lt;/code&gt;, and a function is then applied to each subset in turn. However as we can see from the benchmarks below, it isn’t quite as fast (in this case) as the former approach.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;benchmarks&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Benchmarks&lt;/h1&gt;
+&lt;div id=&#34;htmlwidget-1&#34; style=&#34;width:100%;height:500px;&#34; class=&#34;highchart html-widget&#34;&gt;&lt;/div&gt;
+&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;chart&#34;:{&#34;type&#34;:&#34;column&#34;},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;split_lapply&#34;,&#34;low&#34;:820514,&#34;q1&#34;:872039.5,&#34;median&#34;:924179.5,&#34;q3&#34;:1009309.5,&#34;high&#34;:1172535},{&#34;name&#34;:&#34;by&#34;,&#34;low&#34;:866562,&#34;q1&#34;:932716,&#34;median&#34;:972572,&#34;q3&#34;:1105107,&#34;high&#34;:1342055}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;}},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;To conclude, should you need to perform an operation on a &lt;code&gt;data.frame&lt;/code&gt; in R, you can &lt;code&gt;split()&lt;/code&gt; your data into lists of &lt;code&gt;data.frame&lt;/code&gt;s of the required groups, &lt;code&gt;lapply()&lt;/code&gt; a function to each &lt;code&gt;data.frame&lt;/code&gt; in the list; and finally &lt;code&gt;rbind()&lt;/code&gt; those &lt;code&gt;data.frame&lt;/code&gt;s back into a single &lt;code&gt;data.frame&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Are you aware of any other base R solutions to this problem? If so, let me know in the comments!&lt;/p&gt;
+&lt;p&gt;In my next &lt;a href=&#34;https://nathaneastwood.github.io/2019/08/20/selecting-the-max-value-in-each-group-data-table/&#34;&gt;blog entry&lt;/a&gt;, we will be looking at how to perform this task using the &lt;code&gt;data.table&lt;/code&gt; package.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Including Optional Functionality from Other Packages in Your Code</title>
+      <link>/2019/09/05/including-optional-functionality-from-other-packages-in-your-code/</link>
+      <pubDate>Thu, 05 Sep 2019 21:13:14 -0500</pubDate>
+      
+      <guid>/2019/09/05/including-optional-functionality-from-other-packages-in-your-code/</guid>
+      <description>
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Let’s say you want to write a function with optional functionality which is dependent on the installation of a package that your colleague may not have installed. For example, let’s say you want to have an option to return a &lt;code&gt;data.table&lt;/code&gt; (or a &lt;code&gt;tibble&lt;/code&gt;) instead of a &lt;code&gt;data.frame&lt;/code&gt;, but in this case you don’t want to force your function’s user to have to install &lt;code&gt;data.table&lt;/code&gt; (or &lt;code&gt;tibble&lt;/code&gt; - and its dependencies) just to use your function. Maybe they can’t install it because they are restricted to do so by their IT department or maybe they are working offline. Is it possible to do this?&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;a-toy-example&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;A Toy Example&lt;/h1&gt;
+&lt;p&gt;Let’s say we have a simple function which takes a &lt;code&gt;data.frame&lt;/code&gt; and adds a new column which is a multiplication of an existing column, before returning the whole &lt;code&gt;data.frame&lt;/code&gt; with that new column.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;toy_function &amp;lt;- function(data, column, multiple = 2L, as_data_table = FALSE) {
+  stopifnot(is.integer(multiple) || is.numeric(multiple))
+  new_column_name &amp;lt;- paste(column, multiple, sep = &amp;quot;_&amp;quot;)
+  data[, new_column_name] &amp;lt;- data[, column] * multiple
+  if (as_data_table) data &amp;lt;- data.table::setDT(data)
+  return(data)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Running this function with &lt;code&gt;as_data_table = TRUE&lt;/code&gt; without &lt;code&gt;data.table&lt;/code&gt; installed will give the following error:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;toy_function(mtcars, &amp;quot;mpg&amp;quot;, as_data_table = TRUE)
+# Error in loadNamespace(name) : there is no package called ‘data.table’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is a frustration for the user. This also means that the whole function no longer works and doesn’t return anything. So what can we do? Well, this is where the function &lt;code&gt;requireNamespace()&lt;/code&gt; comes in handy.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;requireNamespace&lt;/code&gt; is a wrapper for &lt;code&gt;loadNamespace&lt;/code&gt; analogous to require that returns a &lt;code&gt;logical&lt;/code&gt; value.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Using &lt;code&gt;requireNamespace()&lt;/code&gt;, we can test whether or not the &lt;code&gt;data.table&lt;/code&gt; package can be loaded from the user’s library before running certain functionality. Let’s take a look at how this changes our function:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;toy_function &amp;lt;- function(data, column, multiple = 2L, as_data_table = FALSE) {
+  stopifnot(is.integer(multiple) || is.numeric(multiple))
+  new_column_name &amp;lt;- paste(column, multiple, sep = &amp;quot;_&amp;quot;)
+  data[, new_column_name] &amp;lt;- data[, column] * multiple
+  if (as_data_table) {
+    if (!requireNamespace(&amp;quot;data.table&amp;quot;, quietly = TRUE)) {
+      warning(&amp;quot;Please install package &amp;#39;data.table&amp;#39; when using &amp;#39;as_data_table = TRUE&amp;#39;&amp;quot;)
+      return(data)
+    }
+    data &amp;lt;- data.table::setDT(data)
+  }
+  return(data)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now when we run our function, the function will check for a &lt;code&gt;data.table&lt;/code&gt; installation and if it is not available, it will warn us that we need to install &lt;code&gt;data.table&lt;/code&gt; in order to use this functionality; yet it will still return the manipulated data, just as a &lt;code&gt;data.frame&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;toy_function(mtcars, &amp;quot;mpg&amp;quot;, as_data_table = TRUE)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb mpg_2
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4  42.0
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4  42.0
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1  45.6
+# ...
+# Ferrari Dino        19.7   6 145.0 175 3.62 2.770 15.50  0  1    5    6  39.4
+# Maserati Bora       15.0   8 301.0 335 3.54 3.570 14.60  0  1    5    8  30.0
+# Volvo 142E          21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2  42.8
+# Warning message:
+# In toy_function(mtcars, &amp;quot;mpg&amp;quot;, as_data_table = TRUE) :
+#   Please install package &amp;#39;data.table&amp;#39; when using &amp;#39;as_data_table = TRUE&amp;#39;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;A real example of this can be seen in the &lt;a href=&#34;https://github.com/fstpackage/fst&#34;&gt;&lt;code&gt;fst&lt;/code&gt;&lt;/a&gt; package. When using the &lt;code&gt;fst::read_fst()&lt;/code&gt; function, the user has the option to return their loaded data &lt;a href=&#34;https://github.com/fstpackage/fst/blob/develop/R/fst.R#L172&#34;&gt;as a &lt;code&gt;data.table&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I really like how this way of using optional functionality does not force additional package downloads on people and also means that your code remains usable on restricted servers or offline. It’s also a great way to not clog up people’s libraries (I’m looking at you &lt;code&gt;tidyverse&lt;/code&gt;).&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;package-development&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Package Development&lt;/h1&gt;
+&lt;p&gt;This solution extends further when developing an R package. My current team is due to start utilising Spark, though our Spark cluster is not yet configured. I have therefore been testing new functionality using a local Spark cluster on our dev environment. Our production environment does not have the &lt;code&gt;sparklyr&lt;/code&gt; package installed yet and so I cannot include any &lt;code&gt;sparklyr&lt;/code&gt; code within my codebase…or can I?&lt;/p&gt;
+&lt;p&gt;Typically when your package relies on another package for functionality, you list that package as an &lt;code&gt;Import&lt;/code&gt; within your package’s &lt;code&gt;DESCRIPTION&lt;/code&gt; file. But what this typically means is that when someone installs your package, they will also need to install the &lt;code&gt;Import&lt;/code&gt;s. However if the dependency is not available to install, you will receive the following error upon installation.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;==&amp;gt; R CMD INSTALL --no-multiarch --with-keep.source mypackage
+
+* installing to library ‘/Library/Frameworks/R.framework/Versions/3.5/Resources/library’
+ERROR: dependency ‘sparklyr’ is not available for package ‘mypackage’
+* removing ‘/Library/Frameworks/R.framework/Versions/3.5/Resources/library/mypackage’
+
+Exited with status 1.&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I am forgoing the idea that it probably isn’t best practice to include non-production code which will not work in your package, this blog post is for the purposes of demonstration only; the following is what you &lt;em&gt;could&lt;/em&gt; do.&lt;/p&gt;
+&lt;p&gt;Removing &lt;code&gt;sparklyr&lt;/code&gt; from the &lt;code&gt;Import&lt;/code&gt; list would allow us to install the package but we would then face two new issues. Firstly, end users could potentially run the function (even if it isn’t exported) and be faced with that same unhelpful error message we saw earlier.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;my_function()
+# Error in loadNamespace(name) : there is no package called ‘sparklyr’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Secondly, from a developer’s point of view, the &lt;code&gt;R CMD check&lt;/code&gt; would fail - which would in turn fail any CI/CD pipelines.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;devtools::check()
+# ...
+# ❯ checking dependencies in R code ... WARNING
+#   &amp;#39;::&amp;#39; or &amp;#39;:::&amp;#39; import not declared from: ‘sparklyr’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So within my function, I simply place the below code (or similar) and if the user tries to run the function, it will simply stop and tell them they need to install the &lt;code&gt;sparklyr&lt;/code&gt; package.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;if (!requireNamespace(&amp;quot;sparklyr&amp;quot;, quietly = TRUE)) {
+  stop(&amp;quot;Package sparklyr needed.&amp;quot;)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will subsequently pass the &lt;code&gt;R CMD check&lt;/code&gt;. Were this an open source package, I could add &lt;code&gt;sparklyr&lt;/code&gt; to the &lt;code&gt;Suggests&lt;/code&gt; field of the &lt;code&gt;DESCRIPTION&lt;/code&gt; file such that users could install the &lt;code&gt;sparklyr&lt;/code&gt; package to get the additional functionality if they wanted it (this is exactly what the &lt;code&gt;fst&lt;/code&gt; package does).&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;So to conclude if you want to include functionality in your code which relies on other packages but are worried about people not having access to those packages, or simply don’t want to force your users to have to install the additional packages, then consider &lt;code&gt;requireNamespace()&lt;/code&gt;. This is a great way of offering additional functionality without the need to clog up user’s libraries.&lt;/p&gt;
+&lt;p&gt;Credit goes to my colleague &lt;a href=&#34;https://twitter.com/jozefhajnala&#34;&gt;Jozef Hajnala&lt;/a&gt; who pointed out this really neat trick!&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>No Visible Binding for Global Variable</title>
+      <link>/2019/08/18/no-visible-binding-for-global-variable/</link>
+      <pubDate>Sun, 18 Aug 2019 21:13:14 -0500</pubDate>
+      
+      <guid>/2019/08/18/no-visible-binding-for-global-variable/</guid>
+      <description>
+
+
+&lt;p&gt;Recently I have been working on a very large legacy project which utilises the excellent &lt;a href=&#34;https://github.com/Rdatatable/data.table&#34;&gt;&lt;code&gt;data.table&lt;/code&gt;&lt;/a&gt; package throughout. What this has resulted in is an &lt;code&gt;R CMD check&lt;/code&gt; containing literally thousands of &lt;code&gt;NOTE&lt;/code&gt;s similar to the following:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  my_fn: no visible binding for global variable ‘mpg’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;There are several reasons why you might see these &lt;code&gt;NOTE&lt;/code&gt;s and, for our code base, some of the &lt;code&gt;NOTE&lt;/code&gt;s were potentially more damaging than others. This was a problem as these &lt;code&gt;NOTE&lt;/code&gt;s were hidden firstly by a suppression of them due to a manipulation of the &lt;code&gt;_R_CHECK_CODETOOLS_PROFILE_&lt;/code&gt; option of the &lt;code&gt;.Renviron&lt;/code&gt; file. Once this was removed we discovered the more damaging &lt;code&gt;NOTE&lt;/code&gt;s were hidden within the sheer amount of &lt;code&gt;NOTE&lt;/code&gt;s we had in the &lt;code&gt;R CMD check&lt;/code&gt;.&lt;/p&gt;
+&lt;div id=&#34;non-standard-evaluation&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Non-standard Evaluation&lt;/h2&gt;
+&lt;p&gt;If we have a function where we are using &lt;code&gt;data.table&lt;/code&gt;’s modification by reference features, i.e. we are using a variable in an unquoted fashion (also known as non-standard evaluation (NSE)) then this issue will occur. Take the following function as an example.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;my_fn &amp;lt;- function() {
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  mtcars[, mpg_div_hp := mpg / hp]
+  mtcars[]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, we would find the following &lt;code&gt;NOTE&lt;/code&gt;s:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  my_fn: no visible binding for global variable ‘mpg_div_hp’
+  my_fn: no visible binding for global variable ‘mpg’
+  my_fn: no visible binding for global variable ‘hp’
+  Undefined global functions or variables:
+    hp mpg mpg_div_hp&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Sometimes you may also see these &lt;code&gt;NOTE&lt;/code&gt;s for syntactic sugar such as &lt;code&gt;!!&lt;/code&gt; or &lt;code&gt;:=&lt;/code&gt; if you haven’t correctly imported the package they come from.&lt;/p&gt;
+&lt;p&gt;This is a &lt;a href=&#34;https://github.com/Rdatatable/data.table/issues/850&#34;&gt;well discussed&lt;/a&gt; issue on the internet which only became an issue after a change introduced to the core R code in version 2.15.1. There are two solutions to this problem.&lt;/p&gt;
+&lt;div id=&#34;option-one&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Option One&lt;/h3&gt;
+&lt;p&gt;Include all variable names within a &lt;code&gt;globalVariables()&lt;/code&gt; call in the package documentation file.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;globalVariables(c(&amp;quot;mpg&amp;quot;, &amp;quot;hp&amp;quot;, &amp;quot;mpg_div_hp&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For our package, as there are literally thousands of variables to list in this file, it makes it very difficult to maintain this list and makes the file very long. If, however, the variables belong to data which are stored within your package then this can be greatly simplified to&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;globalVariables(names(my_data))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You may wish to import any syntactic sugar functionality here as well. For example&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;globalVariables(c(&amp;quot;:=&amp;quot;, &amp;quot;!!&amp;quot;))&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;option-two&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Option Two&lt;/h3&gt;
+&lt;p&gt;The second option involves binding the variable locally to the function. At the top of your function you can define the variable as a &lt;code&gt;NULL&lt;/code&gt; value.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;my_fn &amp;lt;- function() {
+  mpg &amp;lt;- hp &amp;lt;- mpg_div_hp &amp;lt;- NULL
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  mtcars[, mpg_div_hp := mpg / hp]
+  mtcars[]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Therefore your variable(s) are now bound to object(s) and so the &lt;code&gt;R CMD check&lt;/code&gt; has nothing to complain about. This is the method that the &lt;code&gt;data.table&lt;/code&gt; team &lt;a href=&#34;https://cran.r-project.org/web/packages/data.table/vignettes/datatable-importing.html&#34;&gt;recommend&lt;/a&gt; and to me, feels like a much neater and more importantly maintainable solution than the first option.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;a-note-on-the-tidyverse&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;A Note on the Tidyverse&lt;/h3&gt;
+&lt;p&gt;You may also come across this problem whilst programming using the &lt;code&gt;tidyverse&lt;/code&gt; for which there is a very neat solution. You simply need to be more explicit within your function by using the &lt;a href=&#34;https://cran.r-project.org/web/packages/dplyr/vignettes/programming.html&#34;&gt;&lt;code&gt;.data&lt;/code&gt; pronoun&lt;/a&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#&amp;#39; @importFrom rlang .data
+my_fn &amp;lt;- function() {
+  mtcars %&amp;gt;% 
+    mutate(mpg_div_hp = .data$mpg / .data$hp)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note the import!&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;selecting-variables-with-the-data.table-..-prefix&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Selecting Variables with the &lt;code&gt;data.table&lt;/code&gt; &lt;code&gt;..&lt;/code&gt; Prefix&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;NOTE&lt;/code&gt;s can occur when we are using the &lt;code&gt;..&lt;/code&gt; syntax of &lt;code&gt;data.table&lt;/code&gt;, for example&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;double_dot &amp;lt;- function() {
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  select_cols &amp;lt;- c(&amp;quot;cyl&amp;quot;, &amp;quot;wt&amp;quot;)
+  mtcars[, ..select_cols]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will yield&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  Undefined global functions or variables:
+    ..select_cols&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In this instance, this can be solved by avoiding the &lt;code&gt;..&lt;/code&gt; syntax and using the alternative &lt;code&gt;with = FALSE&lt;/code&gt; notation.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;double_dot &amp;lt;- function() {
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  select_cols &amp;lt;- c(&amp;quot;cyl&amp;quot;, &amp;quot;wt&amp;quot;)
+  mtcars[, select_cols, with = FALSE]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Even though the &lt;code&gt;..&lt;/code&gt; prefix is syntactic sugar, we cannot use &lt;code&gt;globalVariables(c(&#34;..&#34;))&lt;/code&gt; since the actual variable in this case is &lt;code&gt;..select_cols&lt;/code&gt;; we would therefore need to use &lt;code&gt;globalVariables(c(&#34;..select_cols&#34;))&lt;/code&gt; if we wanted to use the &lt;code&gt;globalVariables()&lt;/code&gt; approach.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;missing-imports&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Missing Imports&lt;/h2&gt;
+&lt;p&gt;In our code base, I also found &lt;code&gt;NOTE&lt;/code&gt;s for functions or datasets which were not correctly imported. For example, consider the following simple function.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;Rversion &amp;lt;- function() {
+  info &amp;lt;- sessionInfo()
+  info$R.version
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This gives the following &lt;code&gt;NOTE&lt;/code&gt;s:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  Rversion: no visible global function definition for ‘sessionInfo’
+  Consider adding
+    importFrom(&amp;quot;utils&amp;quot;, &amp;quot;sessionInfo&amp;quot;)
+  to your NAMESPACE file.&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here the &lt;code&gt;R CMD check&lt;/code&gt; is rather helpful and tells us the solution; we need to ensure that we explicitly import the function from the &lt;code&gt;utils&lt;/code&gt; package in the documentation. This can easily be done with the &lt;a href=&#34;https://github.com/r-lib/roxygen2&#34;&gt;&lt;code&gt;roxygen2&lt;/code&gt;&lt;/a&gt; package by including an &lt;code&gt;@importFrom utils sessionInfo&lt;/code&gt; tag.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;trying-to-call-removed-functionality&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Trying to Call Removed Functionality&lt;/h2&gt;
+&lt;p&gt;If you have a function which has been removed from your package but attempt to call it from another function, R will only give you a &lt;code&gt;NOTE&lt;/code&gt; about this.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;use_non_existent_function &amp;lt;- function() {
+  this_function_doesnt_exist()
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will give the &lt;code&gt;NOTE&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;❯ checking R code for possible problems ... NOTE
+  use_non_existent_function: no visible global function definition for
+    ‘this_function_doesnt_exist’&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Of course it goes without saying that you should make sure to remove any calls to functions which have been removed from your package. As a side note, when I first started working on the project, I was initially unaware that within our package we had the option &lt;code&gt;_R_CHECK_CODETOOLS_PROFILE_ = &#34;suppressUndefined = TRUE&#34;&lt;/code&gt; set within our &lt;code&gt;.Renviron&lt;/code&gt; file which will suppresses all unbound global variable &lt;code&gt;NOTE&lt;/code&gt;s from appearing in the &lt;code&gt;R CMD check&lt;/code&gt;. However given that this can mask these deeper issues within your package, such as not recognising when a function calls functionality which has been removed from the package. This can end up meaning the end user can face nasty and confusing error messages. Therefore I would not recommend using this setting and would suggest tackling each of your packages &lt;code&gt;NOTE&lt;/code&gt;s individually to remove them all.&lt;/p&gt;
+&lt;p&gt;I actually discovered all of our package &lt;code&gt;NOTE&lt;/code&gt;s when introducing the &lt;a href=&#34;https://github.com/jimhester/lintr&#34;&gt;&lt;code&gt;lintr&lt;/code&gt;&lt;/a&gt; package to our CI pipeline. &lt;code&gt;lintr&lt;/code&gt; will pick up on some – but not all – of these unbound global variable problems (&lt;code&gt;&#39;lintr&lt;/code&gt; of course does not take the &lt;code&gt;_R_CHECK_CODETOOLS_PROFILE_&lt;/code&gt; into account). Take our original function as an example&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;my_fn &amp;lt;- function() {
+  mtcars &amp;lt;- data.table::data.table(mtcars)
+  mtcars[, mpg_div_hp := mpg / hp]
+  mtcars[]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here, &lt;code&gt;lintr&lt;/code&gt; will highlight the variables &lt;code&gt;mpg&lt;/code&gt; and &lt;code&gt;hp&lt;/code&gt; as problems but it currently won’t highlight the variables on the LHS of &lt;code&gt;:=&lt;/code&gt;, i.e. &lt;code&gt;mpg_div_hp&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;When developing your package, if you are experiencing these unbound global variables &lt;code&gt;NOTE&lt;/code&gt;s you should&lt;/p&gt;
+&lt;ol style=&#34;list-style-type: decimal&#34;&gt;
+&lt;li&gt;Strive to define any unbound variables locally within a function.&lt;/li&gt;
+&lt;li&gt;Ensure that any functions or data from external packages (including &lt;code&gt;utils&lt;/code&gt;, &lt;code&gt;stats&lt;/code&gt;, etc.) have the correct &lt;code&gt;@importFrom&lt;/code&gt; tag&lt;/li&gt;
+&lt;li&gt;Do not suppress this check in the &lt;code&gt;.Renviron&lt;/code&gt; file and the solutions proposed here should remove the current need to do so&lt;/li&gt;
+&lt;li&gt;Any package wide unbound variables, which are typically syntactic sugar (e.g. &lt;code&gt;:=&lt;/code&gt;), should be defined within the package description file inside a &lt;code&gt;globalVariables()&lt;/code&gt; function, which should be a very short and maintainable list.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Extending sparklyr: Data Types</title>
+      <link>/2018/03/08/extending-sparklyr-data-types/</link>
+      <pubDate>Thu, 08 Mar 2018 21:13:14 -0500</pubDate>
+      
+      <guid>/2018/03/08/extending-sparklyr-data-types/</guid>
+      <description>
+
+
+&lt;div id=&#34;tldr&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;TL;DR&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;sparklyr&lt;/code&gt; maps R data types and data storage types to Scala, but it doesn’t handle all data storage types. This blog post discusses how to generate Scala data storage types from the R side, that are not generated by &lt;code&gt;sparklyr&lt;/code&gt;. You can do this by using the &lt;code&gt;sparklyr::invoke_new&lt;/code&gt; function to generate the objects you want in Java or Scala, for example a &lt;code&gt;java.util.ArrayList&lt;/code&gt;, and then &lt;code&gt;sparklyr::invoke&lt;/code&gt; methods of the class to add data to it, or convert it to the type you need. Read on to see how to deal with different data storage types from the Scala side or skip ahead to see how to &lt;a href=&#34;#generating-scala-data-types-from-r&#34;&gt;generate Scala data storage types from R&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;When working to &lt;a href=&#34;http://spark.rstudio.com/extensions/&#34;&gt;extend&lt;/a&gt; the &lt;code&gt;sparklyr&lt;/code&gt; package, for example to call custom Scala libraries, oftentimes you will come across Scala methods which require you to use different data storage types to those automatically handled by &lt;code&gt;sparklyr&lt;/code&gt;. When using the &lt;code&gt;invoke&lt;/code&gt; family of functions, R data types map to Scala data types, but &lt;code&gt;sparklyr&lt;/code&gt; &lt;a href=&#34;https://github.com/rstudio/sparklyr/issues/1324&#34;&gt;currently&lt;/a&gt; only handles certain R data storage type mappings. The below table shows the data mappings currently handled by &lt;code&gt;sparklyr&lt;/code&gt;:&lt;/p&gt;
+&lt;table style=&#34;width:100%&#34;&gt;
+&lt;tr&gt;
+&lt;th&gt;
+R Type
+&lt;/th&gt;
+&lt;th&gt;
+Scala Type
+&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;
+logical
+&lt;/td&gt;
+&lt;td&gt;
+Boolean
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;
+numeric
+&lt;/td&gt;
+&lt;td&gt;
+Double
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;
+integer
+&lt;/td&gt;
+&lt;td&gt;
+Integer
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;
+character
+&lt;/td&gt;
+&lt;td&gt;
+String
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;
+list
+&lt;/td&gt;
+&lt;td&gt;
+Array
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;caption&gt;
+Table 1: R to Scala type mappings available in &lt;code&gt;sparklyr&lt;/code&gt;
+&lt;/caption&gt;
+&lt;/table&gt;
+&lt;p&gt;So Scala functions with parameters that require a &lt;code&gt;List&lt;/code&gt; or a &lt;code&gt;Seq&lt;/code&gt;, for example, need to be handled in a different way. There are two ways we can approach this problem; from the Scala side and from the R side. We will explore both approaches.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;other-scala-data-types&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Other Scala Data Types&lt;/h1&gt;
+&lt;div id=&#34;solutions-from-the-scala-side&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Solutions from the Scala Side&lt;/h2&gt;
+&lt;p&gt;There are several ways that this issue can be overcome from the Scala side, here we highlight three: &lt;a href=&#34;#using-different-data-types-in-scala&#34;&gt;changing the data type&lt;/a&gt; used within Scala; using &lt;a href=&#34;#using-overloading&#34;&gt;overloading&lt;/a&gt;; and defining a &lt;a href=&#34;#defining-a-new-scala-class&#34;&gt;specific R class&lt;/a&gt; to be called from R. These are discussed in detail below.&lt;/p&gt;
+&lt;div id=&#34;using-different-data-types-in-scala&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Using Different Data Types in Scala&lt;/h3&gt;
+&lt;p&gt;One obvous way we could fix this problem is to rewrite the Scala code to use a different parameter type in the Scala method. For example, we could use an &lt;code&gt;Array&lt;/code&gt; which would require us passing a &lt;code&gt;list()&lt;/code&gt; on the R side. However, this is not ideal if your project is large, has lots of legacy code and uses other APIs such as &lt;code&gt;PySpark&lt;/code&gt;; you may end up changing a lot of code.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;using-overloading&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Using Overloading&lt;/h3&gt;
+&lt;p&gt;We can instead use &lt;a href=&#34;https://www.javatpoint.com/scala-method-overloading&#34;&gt;overloading&lt;/a&gt;, which allows us to define methods of same name, in the same class, but having either different parameters or data types, though this &lt;a href=&#34;https://stackoverflow.com/questions/2510108/why-avoid-method-overloading&#34;&gt;has many issues&lt;/a&gt;. We would also need to write additional tests for the additional methods. You can think of this as working like R’s S3 methods - for S3 methods the method behaviour will change based on the object’s class.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;defining-a-new-scala-class&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Defining A New Scala Class&lt;/h3&gt;
+&lt;p&gt;To avoid the possible issues of overloading, we can define two separate classes, &lt;code&gt;myClass&lt;/code&gt; and &lt;code&gt;myClassR&lt;/code&gt;. These will both call upon the same underlying &lt;a href=&#34;https://docs.scala-lang.org/overviews/core/implicit-classes.html&#34;&gt;implicit&lt;/a&gt; class which does the bulk of the work for the method. The difference is the data types that are passed into &lt;code&gt;myClass&lt;/code&gt; and &lt;code&gt;myClassR&lt;/code&gt;. &lt;code&gt;myClass&lt;/code&gt; will take the data type you want to use, whereas &lt;code&gt;myClassR&lt;/code&gt; will take the data type passed to it by &lt;code&gt;sparklyr&lt;/code&gt; and then convert it before calling the implicit. Of course using this approach effectively doubles our code and is therefore very wasteful; we would also again, need to write additional tests for this new class.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;solutions-from-the-r-side&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Solutions from the R Side&lt;/h2&gt;
+&lt;div id=&#34;generating-scala-data-storage-types-from-r&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Generating Scala Data Storage Types from R&lt;/h3&gt;
+&lt;p&gt;We can actually forgo any changes on the Scala side of our code by generating what we need on the R side. Imagine we wanted to generate a Scala &lt;code&gt;Seq&lt;/code&gt; as an example, first we create a Java &lt;code&gt;ArrayList&lt;/code&gt; in the Spark environment and incrementally &lt;code&gt;add&lt;/code&gt; data to it using the following code:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(sparklyr)
+sc &amp;lt;- spark_connect(master = &amp;quot;local&amp;quot;)
+# map some R vector `x` to a java ArrayList
+x &amp;lt;- c(1, 2, 3)
+al &amp;lt;- invoke_new(sc, &amp;quot;java.util.ArrayList&amp;quot;)
+lapply(x, FUN = function(y){invoke(al, &amp;quot;add&amp;quot;, y)})&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note we don’t need to reassign the results of the &lt;code&gt;lapply&lt;/code&gt; because it is adding values to the Scala &lt;code&gt;List&lt;/code&gt; in the JVM. Then using the &lt;a href=&#34;https://www.scala-lang.org/api/2.12.3/scala/collection/JavaConversions$.html&#34;&gt;&lt;code&gt;JavaConversions&lt;/code&gt; Scala package&lt;/a&gt;, we convert the &lt;code&gt;Array&lt;/code&gt; to a &lt;code&gt;Seq&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;invoke_static(sc, &amp;quot;scala.collection.JavaConversions&amp;quot;, &amp;quot;asScalaBuffer&amp;quot;, al) %&amp;gt;%
+  invoke(&amp;quot;toSeq&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Putting this all together in a function gives&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;scala_seq &amp;lt;- function(sc, x) {
+  al &amp;lt;- invoke_new(sc, &amp;quot;java.util.ArrayList&amp;quot;)
+  lapply(
+    x,
+    FUN = function(y) {
+      invoke(al, &amp;quot;add&amp;quot;, y)
+    }
+  )
+  invoke_static(sc, &amp;quot;scala.collection.JavaConversions&amp;quot;, &amp;quot;asScalaBuffer&amp;quot;, al) %&amp;gt;%
+    invoke(&amp;quot;toSeq&amp;quot;)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Calling this function returns a reference to the Scala object (&lt;code&gt;spark_jobj&lt;/code&gt;).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# connect to spark
+sc &amp;lt;- sparklyr::spark_connect(master = &amp;quot;local&amp;quot;)
+
+# create a scala seq object
+scala_seq(sc, c(1, 2, 3))
+# &amp;lt;jobj[16]&amp;gt;
+#   scala.collection.convert.Wrappers$JListWrapper
+#   Buffer(1.0, 2.0, 3.0)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;You will note that the output we have received tells us we have created a &lt;code&gt;Buffer&lt;/code&gt; but &lt;code&gt;Buffer&lt;/code&gt; (and &lt;code&gt;List&lt;/code&gt;) both &lt;a href=&#34;https://stackoverflow.com/questions/11126577/why-are-buffer-and-list-objects-equal-even-they-are-from-different-classes&#34;&gt;belong to the same category (sequence)&lt;/a&gt;. If what we needed was actually a &lt;code&gt;List&lt;/code&gt; object, then we simply have to &lt;code&gt;invoke&lt;/code&gt; the &lt;code&gt;toList&lt;/code&gt; method on a &lt;code&gt;Seq&lt;/code&gt; (or &lt;code&gt;Buffer&lt;/code&gt;) object. The below function shows this in action, again this returns a reference to the Scala object (&lt;code&gt;spark_jobj&lt;/code&gt;) to the R console.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;scala_list &amp;lt;- function(sc, x) {
+  scala_seq(sc, x) %&amp;gt;%
+    invoke(&amp;quot;toList&amp;quot;)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# create a scala list
+scala_list(sc, c(1, 2, 3))
+# &amp;lt;jobj[21]&amp;gt;
+#   scala.collection.immutable.$colon$colon
+#   List(1.0, 2.0, 3.0)
+
+# disconnect the spark connection
+spark_disconnect(sc = sc)
+# NULL&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Similar results can be achieved for other data types. These new data storage types can now be used in Scala function calls when extending &lt;code&gt;sparklyr&lt;/code&gt;, we simply generate the data in the JVM and pass the reference to the function we &lt;code&gt;invoke&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Project Euler in R</title>
+      <link>/2018/02/28/project-euler-in-r/</link>
+      <pubDate>Wed, 28 Feb 2018 21:13:14 -0500</pubDate>
+      
+      <guid>/2018/02/28/project-euler-in-r/</guid>
+      <description>
+
+
+&lt;div id=&#34;project-euler&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Project Euler&lt;/h1&gt;
+&lt;p&gt;This is just a short blog post to raise some awareness to some fun programming and mathematical challenges I recently came across, hosted on &lt;a href=&#34;https://projecteuler.net&#34;&gt;Project Euler&lt;/a&gt;. The idea behind Project Euler is to provide abstract programming challenges for people to develop their skills and learn new concepts in a recreational way. The problems range in difficulty and are aimed at:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;students for whom the basic curriculum is not feeding their hunger to learn, adults whose background was not primarily mathematics but had an interest in things mathematical, and professionals who want to keep their problem solving and mathematics on the cutting edge.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/topics/project-euler&#34;&gt;Many, many attempts&lt;/a&gt; have been made to solve these problems in different languages and in fact the &lt;a href=&#34;http://www.rosettacode.org/wiki/Category:Programming_Tasks&#34;&gt;Rosetta Code&lt;/a&gt; website hosts solutions to lots of these challenges. However in my (admittedly brief) search I couldn’t find any one place with hosted R solutions. Thus, I decided to have a go at a few of them, package them up and host them on &lt;a href=&#34;https://github.com/nathaneastwood/euler&#34;&gt;GitHub&lt;/a&gt; with a view to collecting solutions for all of the challenges. With a current list of 611 Project Euler challenges, however, it will take me quite a while to get through them all and so I have enlisted the help of some of my colleagues from Mango Solutions (&lt;a href=&#34;https://github.com/thisisnic&#34;&gt;thisisnic&lt;/a&gt; and &lt;a href=&#34;https://github.com/adfi&#34;&gt;adfi&lt;/a&gt;) who have submitted some solutions. Even so, this is a lot of problems for so few people and so I ask you, my readers, to feel free to submit pull requests via GitHub for any potential solutions you may come up with.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Accessing Private Methods from an R6 Class</title>
+      <link>/2017/08/13/accessing-private-methods-from-an-r6-class/</link>
+      <pubDate>Sun, 13 Aug 2017 21:13:14 -0500</pubDate>
+      
+      <guid>/2017/08/13/accessing-private-methods-from-an-r6-class/</guid>
+      <description>
+
+
+&lt;p&gt;I recently wrote a package to solve the &lt;a href=&#34;http://chrisdone.com/posts/twitter-problem-loeb&#34;&gt;Twitter Waterflow Problem&lt;/a&gt; using an &lt;code&gt;R6&lt;/code&gt; class. You can view the package &lt;a href=&#34;https://github.com/nathaneastwood/waterflow&#34;&gt;here&lt;/a&gt; and read about how I approached the problem &lt;a href=&#34;https://nathaneastwood.github.io/2017/08/09/2017-08-09-twitter-waterflow-problem/&#34;&gt;here&lt;/a&gt;. In this blog post, I want to highlight how you can access &lt;code&gt;private&lt;/code&gt; members of an &lt;code&gt;R6&lt;/code&gt; class which Winston Chang mentioned in his &lt;a href=&#34;https://channel9.msdn.com/Events/useR-international-R-User-conferences/useR-International-R-User-2017-Conference/The-R6-Class-System&#34;&gt;useR!2017 talk&lt;/a&gt;. I will use the &lt;code&gt;waterflow&lt;/code&gt; package for this example. Within the &lt;code&gt;R6&lt;/code&gt; waterflow class there is a &lt;code&gt;private&lt;/code&gt; member function, or method, that converts the data you provide the class with, and the data it calculates, into a tidy &lt;code&gt;data.frame&lt;/code&gt; used for generating a plot. However what if we already have the data that this function needs to be supplied with? How can we just run this function on the fly? If we try to call it directly, we get an error.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(waterflow)
+wall &amp;lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)
+water &amp;lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)
+p &amp;lt;- waterflow$new(wall)
+p$tidyWater(water, wall)
+# Error in eval(expr, envir, enclos): attempt to apply non-function&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Instead, what we need to do is extract the method from the class’ environment, &lt;code&gt;.__enclos_env__&lt;/code&gt;, which allows us access to &lt;code&gt;private&lt;/code&gt; members of the class.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p$.__enclos_env__$private$tidyWater(water, wall)
+#    pos  type val
+# 1    1 water   2
+# 2    2 water   5
+# 3    3 water   1
+# 4    4 water   2
+# 5    5 water   3
+# 6    6 water   4
+# 7    7 water   7
+# 8    8 water   7
+# 9    9 water   6
+# 10   1  wall   2
+# 11   2  wall   5
+# 12   3  wall   1
+# 13   4  wall   2
+# 14   5  wall   3
+# 15   6  wall   4
+# 16   7  wall   7
+# 17   8  wall   7
+# 18   9  wall   6&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>The Twitter Waterflow Problem</title>
+      <link>/2017/08/09/the-twitter-waterflow-problem/</link>
+      <pubDate>Wed, 09 Aug 2017 21:13:14 -0500</pubDate>
+      
+      <guid>/2017/08/09/the-twitter-waterflow-problem/</guid>
+      <description>
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;I was recently introduced to the &lt;a href=&#34;http://chrisdone.com/posts/twitter-problem-loeb&#34;&gt;Twitter Waterflow Problem&lt;/a&gt; and I decided it was interesting enough to try and complete the challenge in R. Consider the following picture:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2017-08-09-twitter-waterflow-problem_files/figure-html/unfilled-1.png&#34; width=&#34;800px&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;This plot shows a series of walls and empty valleys. We can represent this picture by an array of integers, where the value at each index is the height of the wall. So in this case, the array of integers can be defined as:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;wall &amp;lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now imagine it rains. How much water is going to be accumulated in puddles between walls? No puddles are formed at edges of the wall and water is considered to simply run off the edge. We count volume in square blocks of 1×1. Thus, we are left with a puddle between column 2 and column 7 and the volume is 10.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-approach&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;The Approach&lt;/h2&gt;
+&lt;p&gt;The approach I took was one of many ways you could solve this problem. I chose to treat each column (wall) as an index and then for each index I implement a loop:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Find the height of the current index&lt;/li&gt;
+&lt;li&gt;Find the maximum height of the walls to the left of the current index&lt;/li&gt;
+&lt;li&gt;Find the maximum height of the walls to the right of the index&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I then work out what the smallest maximum height is between the maximum heights to the left and right of the current index. If this smallest height minus the current index height is greater than zero, then I know how many blocks will fill with water for the current index. Of course, if the smallest maximum height to the left or right is less than the current height, then I get the run off. Converting this to code looks like this:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;len &amp;lt;- length(wall)
+# pre-allocate memory to make the loop more efficient
+water &amp;lt;- rep(0, len)
+for (i in seq_along(wall)) {
+  currentHeight &amp;lt;- wall[i]
+  maxLeftHeight &amp;lt;- if (i &amp;gt; 1) {
+    max(wall[1:(i - 1)])
+  } else {
+    0
+  }
+  maxRightHeight &amp;lt;- if (i == len) {
+    0
+  } else {
+    max(wall[(i + 1):len])
+  }
+  smallestMaxHeight &amp;lt;- min(maxLeftHeight, maxRightHeight)
+  water[i] &amp;lt;- if (smallestMaxHeight - currentHeight &amp;gt; 0) {
+    smallestMaxHeight - currentHeight
+  } else {
+    0
+  }
+}
+water
+# [1] 0 0 4 3 2 1 0 0 0&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This returns a vector of the number of blocks of water at each index.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-r6-class&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;The R6 Class&lt;/h2&gt;
+&lt;p&gt;For this problem I chose to use the &lt;a href=&#34;https://github.com/r-lib/R6&#34;&gt;&lt;code&gt;R6&lt;/code&gt;&lt;/a&gt; class system because it is very self contained. The &lt;code&gt;R6&lt;/code&gt; class system is different from the functional &lt;code&gt;S3&lt;/code&gt; and &lt;code&gt;S4&lt;/code&gt; class systems found in base R in that it is an encapsulated class system. Some key differences between the two are:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Functional:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Objects contain data&lt;/li&gt;
+&lt;li&gt;Class methods are separate from objects&lt;/li&gt;
+&lt;li&gt;Objects are immutable - they cannot be changed after they have been created&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Encapsulated:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Objects contain methods and data&lt;/li&gt;
+&lt;li&gt;Objects are mutable&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Winston Chang details these differences very well in his &lt;a href=&#34;https://channel9.msdn.com/Events/useR-international-R-User-conferences/useR-International-R-User-2017-Conference/The-R6-Class-System&#34;&gt;userR!2017 talk&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I wanted the user to be able to acquire two key pieces of information: the total blocks of water and the filled plot. I therefore created three &lt;code&gt;public&lt;/code&gt; methods inside an &lt;code&gt;R6&lt;/code&gt; class and placed the class in a simple package which can be found &lt;a href=&#34;https://github.com/nathaneastwood/waterflow&#34;&gt;here&lt;/a&gt;. &lt;code&gt;public&lt;/code&gt; methods are a list of functions (and/or non-functions) which are essentially methods (or data) of the class that are intended to be used by the user of the class.&lt;/p&gt;
+&lt;p&gt;When writing a new &lt;code&gt;R6&lt;/code&gt; class, we often want to perform some initial functionality when we instantiate an object of this class. This is true in our case as when we instantiate a new object of class &lt;code&gt;waterflow&lt;/code&gt;, we want it to calculate the heights of the water straight away. We therefore call our earlier function &lt;code&gt;initialize&lt;/code&gt; and place it inside the &lt;code&gt;public&lt;/code&gt; list.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;initialize = function(wall = NULL) {
+  if (is.null(wall)) {
+    stop(&amp;quot;Please provide some wall heights&amp;quot;)
+  }
+  if (!is.numeric(wall)) {
+    stop(&amp;quot;Please provide a numeric vector&amp;quot;)
+  }
+  len &amp;lt;- length(wall)
+  water &amp;lt;- rep(0, len)
+  for (i in seq_along(wall)) {
+    currentHeight &amp;lt;- wall[i]
+    maxLeftHeight &amp;lt;- if (i &amp;gt; 1) {
+      max(wall[1:(i - 1)])
+    } else {
+      0
+    }
+    maxRightHeight &amp;lt;- if (i == len) {
+      0
+    } else {
+      max(wall[(i + 1):len])
+    }
+    smallestMaxHeight &amp;lt;- min(maxLeftHeight, maxRightHeight)
+    water[i] &amp;lt;- if (smallestMaxHeight - currentHeight &amp;gt; 0) {
+      smallestMaxHeight - currentHeight
+    } else {
+      0
+    }
+  }
+  private$heights &amp;lt;- private$tidyWater(water, wall)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note, we have one key difference here, we are assigning the results to members of the &lt;code&gt;private&lt;/code&gt; list within our object. Once we have calculated our &lt;code&gt;water&lt;/code&gt; heights, we use them along with our &lt;code&gt;wall&lt;/code&gt; heights in the function &lt;code&gt;private$tidyWater()&lt;/code&gt; and assign the resulting &lt;code&gt;data.frame&lt;/code&gt; to &lt;code&gt;private$heights&lt;/code&gt;. The &lt;code&gt;private&lt;/code&gt; argument is a list which contains methods (and/or data) which are internal to the class and are not intended to be used by the user. We do similar things when writing packages - we explicitly export the functionality we want other people to use and don’t export functionality that is only used within the package itself.&lt;/p&gt;
+&lt;p&gt;So to use the class, first we instantiate the class with some data in a call to &lt;code&gt;$new()&lt;/code&gt; which in turn runs the above &lt;code&gt;initialize&lt;/code&gt; function.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(waterflow)
+wall &amp;lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)
+p &amp;lt;- waterflow$new(wall)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So now we have an object called &lt;code&gt;p&lt;/code&gt; which is of class &lt;code&gt;waterflow&lt;/code&gt; (and &lt;code&gt;R6&lt;/code&gt;). &lt;code&gt;p&lt;/code&gt; contains the data, as well as the (&lt;code&gt;public&lt;/code&gt;) methods we can perform on that data.&lt;/p&gt;
+&lt;p&gt;Typically when we return &lt;code&gt;p&lt;/code&gt;, &lt;code&gt;R6&lt;/code&gt; objects have a default &lt;code&gt;print&lt;/code&gt; method that lists all members of the object but here there is a custom &lt;code&gt;$print()&lt;/code&gt; function that returns &lt;code&gt;heights&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p
+#    pos  type val
+# 1    1 water   0
+# 2    2 water   0
+# 3    3 water   4
+# 4    4 water   3
+# 5    5 water   2
+# 6    6 water   1
+# 7    7 water   0
+# 8    8 water   0
+# 9    9 water   0
+# 10   1  wall   2
+# 11   2  wall   5
+# 12   3  wall   1
+# 13   4  wall   2
+# 14   5  wall   3
+# 15   6  wall   4
+# 16   7  wall   7
+# 17   8  wall   7
+# 18   9  wall   6&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can still return the members of the object by looking at the structure of &lt;code&gt;p&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(p)
+# Classes &amp;#39;waterflow&amp;#39;, &amp;#39;R6&amp;#39; &amp;lt;waterflow&amp;gt;
+#   Public:
+#     clone: function (deep = FALSE) 
+#     initialize: function (wall = NULL) 
+#     plot: function () 
+#     print: function () 
+#     total: function () 
+#   Private:
+#     heights: data.frame
+#     tidyWater: function (water, wall)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To calculate the total water that fills the valleys, we sum over the &lt;code&gt;heights&lt;/code&gt; object for the values of the &lt;code&gt;water&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;total = function() {
+  sum(private$heights[private$heights$type %in% &amp;quot;water&amp;quot;, &amp;quot;val&amp;quot;])
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Calling the &lt;code&gt;public&lt;/code&gt; method &lt;code&gt;$total()&lt;/code&gt; gives the expected result.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p$total()
+# [1] 10&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To call the plot, we access the &lt;code&gt;public&lt;/code&gt; method &lt;code&gt;$plot()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p$plot()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2017-08-09-twitter-waterflow-problem_files/figure-html/plotCall-1.png&#34; width=&#34;800px&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;The completed class looks like this&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;waterflow &amp;lt;- R6Class(
+  &amp;quot;waterflow&amp;quot;,
+  public = list(
+    initialize = function(wall = NULL) {
+      if (is.null(wall)) {
+        stop(&amp;quot;Please provide some wall heights&amp;quot;)
+      }
+      if (!is.numeric(wall)) {
+        stop(&amp;quot;Please provide a numeric vector&amp;quot;)
+      }
+      len &amp;lt;- length(wall)
+      water &amp;lt;- rep(0, len)
+      for (i in seq_along(wall)) {
+        currentHeight &amp;lt;- wall[i]
+        maxLeftHeight &amp;lt;- if (i &amp;gt; 1) {
+          max(wall[1:(i - 1)])
+        } else {
+          0
+        }
+        maxRightHeight &amp;lt;- if (i == len) {
+          0
+        } else {
+          max(wall[(i + 1):len])
+        }
+        smallestMaxHeight &amp;lt;- min(maxLeftHeight, maxRightHeight)
+        water[i] &amp;lt;- if (smallestMaxHeight - currentHeight &amp;gt; 0) {
+          smallestMaxHeight - currentHeight
+        } else {
+          0
+        }
+      }
+      private$heights &amp;lt;- private$tidyWater(water, wall)
+    },
+    plot = function() {
+      ggplot(private$heights) +
+        geom_col(
+          aes(x = pos + 1 / 2, y = val, fill = type),
+          width = 1, show.legend = FALSE
+        ) +
+        scale_fill_manual(values = c(&amp;quot;dodgerblue2&amp;quot;, &amp;quot;grey50&amp;quot;)) +
+        scale_x_continuous(breaks = seq(0, max(private$heights$pos), 1)) +
+        theme(
+          panel.background = element_blank(),
+          panel.ontop = TRUE,
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_line(colour = &amp;quot;white&amp;quot;, size = 0.5),
+          panel.grid.major.x = element_line(colour = &amp;quot;white&amp;quot;, size = 0.5),
+          panel.grid.major.y = element_line(colour = &amp;quot;white&amp;quot;, size = 0.5),
+          axis.ticks = element_blank(),
+          text = element_blank()
+        )
+    },
+    print = function() print(private$heights),
+    total = function() {
+      sum(private$heights[private$heights$type %in% &amp;quot;water&amp;quot;, &amp;quot;val&amp;quot;])
+    }
+  ),
+  private = list(
+    heights = NULL,
+    tidyWater = function(water, wall) {
+      data.frame(
+        pos = seq_along(wall),
+        type = factor(
+          rep(c(&amp;quot;water&amp;quot;, &amp;quot;wall&amp;quot;), each = length(wall)),
+          levels = c(&amp;quot;water&amp;quot;, &amp;quot;wall&amp;quot;)
+        ),
+        val = c(water, wall)
+      )
+    }
+  )
+)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;disadvantages-of-r6&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Disadvantages of R6&lt;/h3&gt;
+&lt;p&gt;Overall &lt;code&gt;R6&lt;/code&gt; is a great package with one or two downsides but these are mostly not too worrying. For one thing, &lt;code&gt;R6&lt;/code&gt; is a separate package that users have to load or use as an import but given that it is such a lightweight package and doesn’t have any imports of its own, it’s nothing to be concerned about. Also, &lt;code&gt;R6&lt;/code&gt; doesn’t have any strict type checking but this is remedied by including your own type checking in your methods. The main bug bear I have with &lt;code&gt;R6&lt;/code&gt; is the lack of support from &lt;a href=&#34;https://github.com/klutometis/roxygen&#34;&gt;&lt;code&gt;Roxygen2&lt;/code&gt;&lt;/a&gt; out of the box and this has been an &lt;a href=&#34;https://github.com/klutometis/roxygen/issues/388&#34;&gt;open issue&lt;/a&gt; for a while.&lt;/p&gt;
+&lt;p&gt;Also posted on the &lt;a href=&#34;https://www.mango-solutions.com/blog/the-twitter-waterflow-problem&#34;&gt;Mango Solutions blog&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Automatically Building, Testing and Deploying bookdown with Travis and GitHub Pages</title>
+      <link>/2017/05/16/automatically-building-testing-and-deploying-bookdown-with-travis-and-github-pages/</link>
+      <pubDate>Tue, 16 May 2017 21:13:14 -0500</pubDate>
+      
+      <guid>/2017/05/16/automatically-building-testing-and-deploying-bookdown-with-travis-and-github-pages/</guid>
+      <description>
+
+
+&lt;p&gt;I recently began writing some documentation around coding standards using &lt;code&gt;bookdown&lt;/code&gt;. The workflow I was using was to write the new sections of the book, build the book and then push the changes to GitHub where it is &lt;a href=&#34;https://datasciencecampus.github.io/coding-standards/&#34;&gt;hosted&lt;/a&gt; using GitHub Pages. This was clearly one manual step too far for me as I consistently forgot to build the book before I pushed the changes to GitHub meaning those changes were not shown on the subsequent web pages. Then when I finally did manage to convert the &lt;code&gt;Rmarkdown&lt;/code&gt; to &lt;code&gt;html&lt;/code&gt;, I found that some links would be broken or missing, I therefore needed two things:&lt;/p&gt;
+&lt;ol style=&#34;list-style-type: decimal&#34;&gt;
+&lt;li&gt;I needed a way to automatically build the book.&lt;/li&gt;
+&lt;li&gt;I needed a way to test my html files.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;I was already familiar with Travis having used it for some of my packages. I therefore decided that a smart way to handle the build would be to build the book on Travis and push the subsequent &lt;code&gt;docs&lt;/code&gt; folder back to my &lt;code&gt;gh-pages&lt;/code&gt; branch on GitHub using Travis’ inbuilt &lt;a href=&#34;https://docs.travis-ci.com/user/deployment/pages/&#34;&gt;deployment method&lt;/a&gt; for deploying to GitHub Pages. But before it pushed these changes, I would be able to test the &lt;code&gt;html&lt;/code&gt; files with the &lt;code&gt;Ruby&lt;/code&gt; library, &lt;a href=&#34;https://github.com/gjtorikian/html-proofer&#34;&gt;&lt;code&gt;html-proofer&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;HTMLProofer is a set of tests to validate your HTML output. These tests check if your image references are legitimate, if they have alt tags, if your internal links are working, and so on. It’s intended to be an all-in-one checker for your output.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;We can achieve all of this with the following &lt;code&gt;.travis.yml&lt;/code&gt; file.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;language: R
+sudo: required
+cache: packages
+
+r_packages:
+  - bookdown
+
+before_script:
+  - chmod +x ./scripts/cibuild
+
+before_install:                           # Install Ruby and html-proofer
+  - rvm get stable --auto-dotfiles
+  - rvm install 2.3.3
+  - gem install html-proofer
+
+script:
+  - ./scripts/cibuild
+
+deploy:
+  provider: pages                         # Specify the gh-pages deployment method
+  skip_cleanup: true                      # Don&amp;#39;t remove files
+  github_token: $GITHUB_TOKEN             # Set in travis-ci.org dashboard
+  local_dir: docs                         # Deploy the docs folder
+  on:
+    branch: master
+
+env:
+  global:
+    - NOKOGIRI_USE_SYSTEM_LIBRARIES=true  # Speed up the html-proofer
+
+notifications:
+  email: false&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note, the &lt;code&gt;GITHUB_TOKEN&lt;/code&gt; is a GitHub Personal Access Token (PAT) that you store in the &lt;a href=&#34;travis-ci.org&#34;&gt;travis-ci.org&lt;/a&gt; dashboard under the settings for the repository.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/github_token.png&#34; width=&#34;800px&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;cibuild&lt;/code&gt; is then a simple file that first renders the book (&lt;code&gt;_build.sd&lt;/code&gt;), thus creating the &lt;code&gt;html&lt;/code&gt; files within a &lt;code&gt;docs&lt;/code&gt; folder (which is specified in the &lt;code&gt;output_dir:&lt;/code&gt; tag in my &lt;code&gt;_bookdown.yml&lt;/code&gt; file) and then it runs the &lt;code&gt;html-proofer&lt;/code&gt; on the resulting &lt;code&gt;html&lt;/code&gt; files.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;. _build.sh
+htmlproofer ./docs&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Where the &lt;code&gt;_build.sh&lt;/code&gt; script is just:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;#!/bin/sh
+
+Rscript -e &amp;quot;bookdown::render_book(&amp;#39;index.Rmd&amp;#39;, &amp;#39;bookdown::gitbook&amp;#39;)&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If all is well, Travis will then push the &lt;code&gt;html&lt;/code&gt; files back to the &lt;code&gt;gh-pages&lt;/code&gt; branch, thus updating the hosted version of the book.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Piping Within Pipes</title>
+      <link>/2016/11/21/piping-within-pipes/</link>
+      <pubDate>Mon, 21 Nov 2016 21:13:14 -0500</pubDate>
+      
+      <guid>/2016/11/21/piping-within-pipes/</guid>
+      <description>
+
+
+&lt;p&gt;The &lt;code&gt;magrittr&lt;/code&gt; pipe (&lt;code&gt;%&amp;gt;%&lt;/code&gt;) has revolutionised the way many people now write R code. I’ve been using R for over 7 years and the pipe has become a staple of my programming conventions. However it was recently brought to my attention that you can actually use pipes within function calls, which can make my code even more human readable. Take for example the following code.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(forcats)
+library(dplyr)
+gss_cat2 &amp;lt;-
+  gss_cat %&amp;gt;%
+  mutate(marital2 = fct_rev(fct_infreq(marital)))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Whilst this code is fairly easy to read, you can imagine how this doesn’t scale very nicely with even more nested function calls. One solution would be to use &lt;code&gt;dplyr&lt;/code&gt;’s ability to &lt;code&gt;mutate&lt;/code&gt; the same column within the &lt;code&gt;mutate&lt;/code&gt; function call to split out the code a little more.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;gss_cat3 &amp;lt;-
+  gss_cat %&amp;gt;%
+  mutate(
+    marital2 = fct_infreq(marital),
+    marital2 = fct_rev(marital2)
+  )&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Sure this is more readable, but it’s repeating far too much code for my liking. So, we can instead just use the pipe.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;gss_cat4 &amp;lt;-
+  gss_cat %&amp;gt;%
+  mutate(
+    marital2 =
+      marital %&amp;gt;%
+      fct_infreq() %&amp;gt;%
+      fct_rev()
+  )&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This not only eliminates long, nested function calls but it also makes my code much more human readable! Try it yourself.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;ggplot(gss_cat4) +
+  geom_bar(aes(x = marital2)) +
+  labs(x = &amp;quot;Marital Status&amp;quot;, y = &amp;quot;Count&amp;quot;) +
+  coord_flip()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2016-11-21-pipes-in-pipes_files/figure-html/barchart-1.png&#34; width=&#34;800px&#34; /&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>About</title>
+      <link>/about/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/about/</guid>
+      <description>&lt;p&gt;I am the &lt;em&gt;Chief Data Scientist&lt;/em&gt; and founder of &lt;a href=&#34;https://www.linkedin.com/company/19160182/&#34;&gt;NE Data&lt;/a&gt;. I have a demonstrated history of working and consulting across multiple industries since 2009. Skilled in R, Python, SQL and Statistical Modelling, my passion is turning business problems into technical solutions through the use of data; building pipelines; building applications; modelling; and data visualisation.&lt;/p&gt;
+
+&lt;p&gt;I have an MSc in Statistics from Sheffield University and a BSc in Mathematics and Statistics from Plymouth University. I enjoy writing open source R code and Shiny apps; check out my work on &lt;a href=&#34;https://github.com/nathaneastwood&#34;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;You can &lt;a href=&#34;mailto:nathan.eastwood@icloud.com?subject=Hello&#34;&gt;email me&lt;/a&gt; or find me &lt;a href=&#34;https://twitter.com/nathaneastwood_&#34;&gt;on Twitter&lt;/a&gt; if you want to message me. I love meeting new people and talking about code so feel free to get in touch!&lt;/p&gt;
+
+&lt;p&gt;Find me on &lt;a href=&#34;https://www.r-bloggers.com/&#34;&gt;R-Bloggers&lt;/a&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

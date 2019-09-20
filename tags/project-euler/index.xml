@@ -1,0 +1,34 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>project-euler on Random R Ramblings</title>
+    <link>/tags/project-euler/</link>
+    <description>Recent content in project-euler on Random R Ramblings</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <lastBuildDate>Wed, 28 Feb 2018 21:13:14 -0500</lastBuildDate>
+    
+        <atom:link href="/tags/project-euler/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Project Euler in R</title>
+      <link>/2018/02/28/project-euler-in-r/</link>
+      <pubDate>Wed, 28 Feb 2018 21:13:14 -0500</pubDate>
+      
+      <guid>/2018/02/28/project-euler-in-r/</guid>
+      <description>
+
+
+&lt;div id=&#34;project-euler&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Project Euler&lt;/h1&gt;
+&lt;p&gt;This is just a short blog post to raise some awareness to some fun programming and mathematical challenges I recently came across, hosted on &lt;a href=&#34;https://projecteuler.net&#34;&gt;Project Euler&lt;/a&gt;. The idea behind Project Euler is to provide abstract programming challenges for people to develop their skills and learn new concepts in a recreational way. The problems range in difficulty and are aimed at:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;students for whom the basic curriculum is not feeding their hunger to learn, adults whose background was not primarily mathematics but had an interest in things mathematical, and professionals who want to keep their problem solving and mathematics on the cutting edge.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/topics/project-euler&#34;&gt;Many, many attempts&lt;/a&gt; have been made to solve these problems in different languages and in fact the &lt;a href=&#34;http://www.rosettacode.org/wiki/Category:Programming_Tasks&#34;&gt;Rosetta Code&lt;/a&gt; website hosts solutions to lots of these challenges. However in my (admittedly brief) search I couldn’t find any one place with hosted R solutions. Thus, I decided to have a go at a few of them, package them up and host them on &lt;a href=&#34;https://github.com/nathaneastwood/euler&#34;&gt;GitHub&lt;/a&gt; with a view to collecting solutions for all of the challenges. With a current list of 611 Project Euler challenges, however, it will take me quite a while to get through them all and so I have enlisted the help of some of my colleagues from Mango Solutions (&lt;a href=&#34;https://github.com/thisisnic&#34;&gt;thisisnic&lt;/a&gt; and &lt;a href=&#34;https://github.com/adfi&#34;&gt;adfi&lt;/a&gt;) who have submitted some solutions. Even so, this is a lot of problems for so few people and so I ask you, my readers, to feel free to submit pull requests via GitHub for any potential solutions you may come up with.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

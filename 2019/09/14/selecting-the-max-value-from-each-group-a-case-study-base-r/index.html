@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>Selecting the max value from each group, a case study: base R - Random R Ramblings</title>
+<meta property="og:title" content="Selecting the max value from each group, a case study: base R - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/nathaneastwood">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/nathaneastwood/">LinkedIn</a></li>
+    
+    <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood">Stack Overflow</a></li>
+    
+    <li><a href="https://twitter.com/nathaneastwood_">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">4 min read</span>
+    
+
+    <h1 class="article-title">Selecting the max value from each group, a case study: base R</h1>
+
+    
+    <span class="article-date">2019-09-14</span>
+    
+
+    <div class="article-content">
+      
+<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<script src="/rmarkdown-libs/proj4js/proj4.js"></script>
+<link href="/rmarkdown-libs/highcharts/css/motion.css" rel="stylesheet" />
+<link href="/rmarkdown-libs/highcharts/css/htmlwdgtgrid.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/highcharts/highcharts.js"></script>
+<script src="/rmarkdown-libs/highcharts/highcharts-3d.js"></script>
+<script src="/rmarkdown-libs/highcharts/highcharts-more.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/stock.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/map.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/annotations.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/boost.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/data.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/drag-panes.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/drilldown.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/item-series.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/offline-exporting.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/overlapping-datalabels.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/exporting.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/export-data.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/funnel.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/heatmap.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/treemap.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/sankey.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/solid-gauge.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/streamgraph.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/sunburst.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/vector.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/wordcloud.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/xrange.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/tilemap.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/venn.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/gantt.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/timeline.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/parallel-coordinates.js"></script>
+<script src="/rmarkdown-libs/highcharts/plugins/grouped-categories.js"></script>
+<script src="/rmarkdown-libs/highcharts/plugins/motion.js"></script>
+<script src="/rmarkdown-libs/highcharts/plugins/multicolor_series.js"></script>
+<script src="/rmarkdown-libs/highcharts/custom/reset.js"></script>
+<script src="/rmarkdown-libs/highcharts/custom/symbols-extra.js"></script>
+<script src="/rmarkdown-libs/highcharts/custom/text-symbols.js"></script>
+<script src="/rmarkdown-libs/highchart-binding/highchart.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Let’s say we wish to group some data by a variable, then for each group we wish to find the row of the maximum value of another variable, and then finally extract the entire row. This is a fairly common task and in fact I’ve had to do this exact data exploration technique on several occasions in the last week using different syntax, <code>data.table</code> and <code>sparklyr</code>; so I thought I would share my code with you so you can compare the different options. In fact for this blog entry, I will be using base R before looking at <code>data.table</code>, <code>dplyr</code> and <code>sparklyr</code> in subsequent posts.</p>
+<p>For this exercise, I will be using the classic <code>datasets::mtcars</code> data. The aim here is to find the row for each cylinder group (<code>cyl</code>) where the miles per gallon (<code>mpg</code>) value is at its highest. I am not interested in finding multiple rows, I just want one row for each group even if there are cars which share the same <code>mpg</code>.</p>
+</div>
+<div id="base-r-solution" class="section level1">
+<h1>Base R Solution</h1>
+<p>For this blog entry, I am going to look at using base R. This is a classic <code>split()</code> + <code>lapply()</code> problem. First I’ll do some pre-processing to <code>mtcars</code> just so that we can see which cars have the maximum mpg for each cylinder group.</p>
+<pre class="r"><code># Create a column of car names
+mtcars_colnames &lt;- colnames(mtcars)
+mtcars[, &quot;car&quot;] &lt;- rownames(mtcars)
+mtcars &lt;- mtcars[, c(&quot;car&quot;, mtcars_colnames)]</code></pre>
+<p>Now we can find the rows we want.</p>
+<pre class="r"><code>max_mpg &lt;- do.call(rbind, lapply(
+  # Split the data into groups for each cylinder
+  split(mtcars, mtcars[, &quot;cyl&quot;]),
+  function(x) {
+    # For the group `x`, select the row which has the maximum mpg
+    x[which.max(x[, &quot;mpg&quot;]), ]
+  }
+))
+rownames(max_mpg) &lt;- NULL
+max_mpg
+#                car  mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# 1   Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 2   Hornet 4 Drive 21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 3 Pontiac Firebird 19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2</code></pre>
+<p>So what we did here is <code>split()</code> the <code>data.frame</code> into separate lists, one for each cylinder group, and then used <code>lapply()</code> (list apply) to apply a function which, for each group, selects the row which has the maximum mpg. Finally we <code>rbind()</code> each list back together into a <code>data.frame</code>.</p>
+<p>You may be curious about my use of <code>which.max(x[, "mpg"])</code> over say <code>mtcars[mtcars$mpg == max(mtcars$mpg), ]</code>, well it’s because the former will only return a single row, whereas the latter will return multiple matching rows (check out <code>?which.max</code>) and in this instance I was only interested in a single row for each group.</p>
+<p>Another approach for base R is to use the <code>by</code> function.</p>
+<pre class="r"><code>do.call(rbind, by(datasets::mtcars, mtcars$cyl, function(x) x[which.max(x$mpg), ]))
+#    mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# 4 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# 6 21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1
+# 8 19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2</code></pre>
+<p>This acts in a similar way to the <code>split</code> + <code>lapply</code> approach in that the <code>data.frame</code> is split by row into <code>data.frame</code>s subset by the values of one or more factors, in this case <code>cyl</code>, and a function is then applied to each subset in turn. However as we can see from the benchmarks below, it isn’t quite as fast (in this case) as the former approach.</p>
+</div>
+<div id="benchmarks" class="section level1">
+<h1>Benchmarks</h1>
+<div id="htmlwidget-1" style="width:100%;height:500px;" class="highchart html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"hc_opts":{"title":{"text":"<b>data.table Solutions<b>"},"yAxis":{"title":{"text":"<b> Time (ns)<b>"}},"credits":{"enabled":false},"exporting":{"enabled":false},"plotOptions":{"series":{"label":{"enabled":false},"turboThreshold":0,"marker":{"symbol":"circle"},"showInLegend":false},"treemap":{"layoutAlgorithm":"squarified"}},"chart":{"type":"column"},"xAxis":{"type":"category","categories":""},"series":[{"g2":null,"data":[{"name":"split_lapply","low":820514,"q1":872039.5,"median":924179.5,"q3":1009309.5,"high":1172535},{"name":"by","low":866562,"q1":932716,"median":972572,"q3":1105107,"high":1342055}],"type":"boxplot","id":null,"name":"Solution","color":"#6272a4","fillColor":"#f8f8f2","lineWidth":1.5}]},"theme":{"chart":{"backgroundColor":"transparent"}},"conf_opts":{"global":{"Date":null,"VMLRadialGradientURL":"http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png","canvasToolsURL":"http =//code.highcharts.com/list(version)/modules/canvas-tools.js","getTimezoneOffset":null,"timezoneOffset":0,"useUTC":true},"lang":{"contextButtonTitle":"Chart context menu","decimalPoint":".","downloadJPEG":"Download JPEG image","downloadPDF":"Download PDF document","downloadPNG":"Download PNG image","downloadSVG":"Download SVG vector image","drillUpText":"Back to {series.name}","invalidDate":null,"loading":"Loading...","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"noData":"No data to display","numericSymbols":["k","M","G","T","P","E"],"printChart":"Print chart","resetZoom":"Reset zoom","resetZoomTitle":"Reset zoom level 1:1","shortMonths":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"thousandsSep":" ","weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]}},"type":"chart","fonts":[],"debug":false},"evals":[],"jsHooks":[]}</script>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>To conclude, should you need to perform an operation on a <code>data.frame</code> in R, you can <code>split()</code> your data into lists of <code>data.frame</code>s of the required groups, <code>lapply()</code> a function to each <code>data.frame</code> in the list; and finally <code>rbind()</code> those <code>data.frame</code>s back into a single <code>data.frame</code>.</p>
+<p>Are you aware of any other base R solutions to this problem? If so, let me know in the comments!</p>
+<p>In my next <a href="https://nathaneastwood.github.io/2019/08/20/selecting-the-max-value-in-each-group-data-table/">blog entry</a>, we will be looking at how to perform this task using the <code>data.table</code> package.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

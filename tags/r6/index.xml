@@ -1,0 +1,283 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>R6 on Random R Ramblings</title>
+    <link>/tags/r6/</link>
+    <description>Recent content in R6 on Random R Ramblings</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-gb</language>
+    <lastBuildDate>Sun, 13 Aug 2017 21:13:14 -0500</lastBuildDate>
+    
+        <atom:link href="/tags/r6/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Accessing Private Methods from an R6 Class</title>
+      <link>/2017/08/13/accessing-private-methods-from-an-r6-class/</link>
+      <pubDate>Sun, 13 Aug 2017 21:13:14 -0500</pubDate>
+      
+      <guid>/2017/08/13/accessing-private-methods-from-an-r6-class/</guid>
+      <description>
+
+
+&lt;p&gt;I recently wrote a package to solve the &lt;a href=&#34;http://chrisdone.com/posts/twitter-problem-loeb&#34;&gt;Twitter Waterflow Problem&lt;/a&gt; using an &lt;code&gt;R6&lt;/code&gt; class. You can view the package &lt;a href=&#34;https://github.com/nathaneastwood/waterflow&#34;&gt;here&lt;/a&gt; and read about how I approached the problem &lt;a href=&#34;https://nathaneastwood.github.io/2017/08/09/2017-08-09-twitter-waterflow-problem/&#34;&gt;here&lt;/a&gt;. In this blog post, I want to highlight how you can access &lt;code&gt;private&lt;/code&gt; members of an &lt;code&gt;R6&lt;/code&gt; class which Winston Chang mentioned in his &lt;a href=&#34;https://channel9.msdn.com/Events/useR-international-R-User-conferences/useR-International-R-User-2017-Conference/The-R6-Class-System&#34;&gt;useR!2017 talk&lt;/a&gt;. I will use the &lt;code&gt;waterflow&lt;/code&gt; package for this example. Within the &lt;code&gt;R6&lt;/code&gt; waterflow class there is a &lt;code&gt;private&lt;/code&gt; member function, or method, that converts the data you provide the class with, and the data it calculates, into a tidy &lt;code&gt;data.frame&lt;/code&gt; used for generating a plot. However what if we already have the data that this function needs to be supplied with? How can we just run this function on the fly? If we try to call it directly, we get an error.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(waterflow)
+wall &amp;lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)
+water &amp;lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)
+p &amp;lt;- waterflow$new(wall)
+p$tidyWater(water, wall)
+# Error in eval(expr, envir, enclos): attempt to apply non-function&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Instead, what we need to do is extract the method from the class’ environment, &lt;code&gt;.__enclos_env__&lt;/code&gt;, which allows us access to &lt;code&gt;private&lt;/code&gt; members of the class.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p$.__enclos_env__$private$tidyWater(water, wall)
+#    pos  type val
+# 1    1 water   2
+# 2    2 water   5
+# 3    3 water   1
+# 4    4 water   2
+# 5    5 water   3
+# 6    6 water   4
+# 7    7 water   7
+# 8    8 water   7
+# 9    9 water   6
+# 10   1  wall   2
+# 11   2  wall   5
+# 12   3  wall   1
+# 13   4  wall   2
+# 14   5  wall   3
+# 15   6  wall   4
+# 16   7  wall   7
+# 17   8  wall   7
+# 18   9  wall   6&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>The Twitter Waterflow Problem</title>
+      <link>/2017/08/09/the-twitter-waterflow-problem/</link>
+      <pubDate>Wed, 09 Aug 2017 21:13:14 -0500</pubDate>
+      
+      <guid>/2017/08/09/the-twitter-waterflow-problem/</guid>
+      <description>
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;I was recently introduced to the &lt;a href=&#34;http://chrisdone.com/posts/twitter-problem-loeb&#34;&gt;Twitter Waterflow Problem&lt;/a&gt; and I decided it was interesting enough to try and complete the challenge in R. Consider the following picture:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2017-08-09-twitter-waterflow-problem_files/figure-html/unfilled-1.png&#34; width=&#34;800px&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;This plot shows a series of walls and empty valleys. We can represent this picture by an array of integers, where the value at each index is the height of the wall. So in this case, the array of integers can be defined as:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;wall &amp;lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now imagine it rains. How much water is going to be accumulated in puddles between walls? No puddles are formed at edges of the wall and water is considered to simply run off the edge. We count volume in square blocks of 1×1. Thus, we are left with a puddle between column 2 and column 7 and the volume is 10.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-approach&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;The Approach&lt;/h2&gt;
+&lt;p&gt;The approach I took was one of many ways you could solve this problem. I chose to treat each column (wall) as an index and then for each index I implement a loop:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Find the height of the current index&lt;/li&gt;
+&lt;li&gt;Find the maximum height of the walls to the left of the current index&lt;/li&gt;
+&lt;li&gt;Find the maximum height of the walls to the right of the index&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I then work out what the smallest maximum height is between the maximum heights to the left and right of the current index. If this smallest height minus the current index height is greater than zero, then I know how many blocks will fill with water for the current index. Of course, if the smallest maximum height to the left or right is less than the current height, then I get the run off. Converting this to code looks like this:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;len &amp;lt;- length(wall)
+# pre-allocate memory to make the loop more efficient
+water &amp;lt;- rep(0, len)
+for (i in seq_along(wall)) {
+  currentHeight &amp;lt;- wall[i]
+  maxLeftHeight &amp;lt;- if (i &amp;gt; 1) {
+    max(wall[1:(i - 1)])
+  } else {
+    0
+  }
+  maxRightHeight &amp;lt;- if (i == len) {
+    0
+  } else {
+    max(wall[(i + 1):len])
+  }
+  smallestMaxHeight &amp;lt;- min(maxLeftHeight, maxRightHeight)
+  water[i] &amp;lt;- if (smallestMaxHeight - currentHeight &amp;gt; 0) {
+    smallestMaxHeight - currentHeight
+  } else {
+    0
+  }
+}
+water
+# [1] 0 0 4 3 2 1 0 0 0&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This returns a vector of the number of blocks of water at each index.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-r6-class&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;The R6 Class&lt;/h2&gt;
+&lt;p&gt;For this problem I chose to use the &lt;a href=&#34;https://github.com/r-lib/R6&#34;&gt;&lt;code&gt;R6&lt;/code&gt;&lt;/a&gt; class system because it is very self contained. The &lt;code&gt;R6&lt;/code&gt; class system is different from the functional &lt;code&gt;S3&lt;/code&gt; and &lt;code&gt;S4&lt;/code&gt; class systems found in base R in that it is an encapsulated class system. Some key differences between the two are:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Functional:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Objects contain data&lt;/li&gt;
+&lt;li&gt;Class methods are separate from objects&lt;/li&gt;
+&lt;li&gt;Objects are immutable - they cannot be changed after they have been created&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Encapsulated:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Objects contain methods and data&lt;/li&gt;
+&lt;li&gt;Objects are mutable&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Winston Chang details these differences very well in his &lt;a href=&#34;https://channel9.msdn.com/Events/useR-international-R-User-conferences/useR-International-R-User-2017-Conference/The-R6-Class-System&#34;&gt;userR!2017 talk&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;I wanted the user to be able to acquire two key pieces of information: the total blocks of water and the filled plot. I therefore created three &lt;code&gt;public&lt;/code&gt; methods inside an &lt;code&gt;R6&lt;/code&gt; class and placed the class in a simple package which can be found &lt;a href=&#34;https://github.com/nathaneastwood/waterflow&#34;&gt;here&lt;/a&gt;. &lt;code&gt;public&lt;/code&gt; methods are a list of functions (and/or non-functions) which are essentially methods (or data) of the class that are intended to be used by the user of the class.&lt;/p&gt;
+&lt;p&gt;When writing a new &lt;code&gt;R6&lt;/code&gt; class, we often want to perform some initial functionality when we instantiate an object of this class. This is true in our case as when we instantiate a new object of class &lt;code&gt;waterflow&lt;/code&gt;, we want it to calculate the heights of the water straight away. We therefore call our earlier function &lt;code&gt;initialize&lt;/code&gt; and place it inside the &lt;code&gt;public&lt;/code&gt; list.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;initialize = function(wall = NULL) {
+  if (is.null(wall)) {
+    stop(&amp;quot;Please provide some wall heights&amp;quot;)
+  }
+  if (!is.numeric(wall)) {
+    stop(&amp;quot;Please provide a numeric vector&amp;quot;)
+  }
+  len &amp;lt;- length(wall)
+  water &amp;lt;- rep(0, len)
+  for (i in seq_along(wall)) {
+    currentHeight &amp;lt;- wall[i]
+    maxLeftHeight &amp;lt;- if (i &amp;gt; 1) {
+      max(wall[1:(i - 1)])
+    } else {
+      0
+    }
+    maxRightHeight &amp;lt;- if (i == len) {
+      0
+    } else {
+      max(wall[(i + 1):len])
+    }
+    smallestMaxHeight &amp;lt;- min(maxLeftHeight, maxRightHeight)
+    water[i] &amp;lt;- if (smallestMaxHeight - currentHeight &amp;gt; 0) {
+      smallestMaxHeight - currentHeight
+    } else {
+      0
+    }
+  }
+  private$heights &amp;lt;- private$tidyWater(water, wall)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note, we have one key difference here, we are assigning the results to members of the &lt;code&gt;private&lt;/code&gt; list within our object. Once we have calculated our &lt;code&gt;water&lt;/code&gt; heights, we use them along with our &lt;code&gt;wall&lt;/code&gt; heights in the function &lt;code&gt;private$tidyWater()&lt;/code&gt; and assign the resulting &lt;code&gt;data.frame&lt;/code&gt; to &lt;code&gt;private$heights&lt;/code&gt;. The &lt;code&gt;private&lt;/code&gt; argument is a list which contains methods (and/or data) which are internal to the class and are not intended to be used by the user. We do similar things when writing packages - we explicitly export the functionality we want other people to use and don’t export functionality that is only used within the package itself.&lt;/p&gt;
+&lt;p&gt;So to use the class, first we instantiate the class with some data in a call to &lt;code&gt;$new()&lt;/code&gt; which in turn runs the above &lt;code&gt;initialize&lt;/code&gt; function.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(waterflow)
+wall &amp;lt;- c(2, 5, 1, 2, 3, 4, 7, 7, 6)
+p &amp;lt;- waterflow$new(wall)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So now we have an object called &lt;code&gt;p&lt;/code&gt; which is of class &lt;code&gt;waterflow&lt;/code&gt; (and &lt;code&gt;R6&lt;/code&gt;). &lt;code&gt;p&lt;/code&gt; contains the data, as well as the (&lt;code&gt;public&lt;/code&gt;) methods we can perform on that data.&lt;/p&gt;
+&lt;p&gt;Typically when we return &lt;code&gt;p&lt;/code&gt;, &lt;code&gt;R6&lt;/code&gt; objects have a default &lt;code&gt;print&lt;/code&gt; method that lists all members of the object but here there is a custom &lt;code&gt;$print()&lt;/code&gt; function that returns &lt;code&gt;heights&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p
+#    pos  type val
+# 1    1 water   0
+# 2    2 water   0
+# 3    3 water   4
+# 4    4 water   3
+# 5    5 water   2
+# 6    6 water   1
+# 7    7 water   0
+# 8    8 water   0
+# 9    9 water   0
+# 10   1  wall   2
+# 11   2  wall   5
+# 12   3  wall   1
+# 13   4  wall   2
+# 14   5  wall   3
+# 15   6  wall   4
+# 16   7  wall   7
+# 17   8  wall   7
+# 18   9  wall   6&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can still return the members of the object by looking at the structure of &lt;code&gt;p&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(p)
+# Classes &amp;#39;waterflow&amp;#39;, &amp;#39;R6&amp;#39; &amp;lt;waterflow&amp;gt;
+#   Public:
+#     clone: function (deep = FALSE) 
+#     initialize: function (wall = NULL) 
+#     plot: function () 
+#     print: function () 
+#     total: function () 
+#   Private:
+#     heights: data.frame
+#     tidyWater: function (water, wall)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To calculate the total water that fills the valleys, we sum over the &lt;code&gt;heights&lt;/code&gt; object for the values of the &lt;code&gt;water&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;total = function() {
+  sum(private$heights[private$heights$type %in% &amp;quot;water&amp;quot;, &amp;quot;val&amp;quot;])
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Calling the &lt;code&gt;public&lt;/code&gt; method &lt;code&gt;$total()&lt;/code&gt; gives the expected result.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p$total()
+# [1] 10&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To call the plot, we access the &lt;code&gt;public&lt;/code&gt; method &lt;code&gt;$plot()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;p$plot()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2017-08-09-twitter-waterflow-problem_files/figure-html/plotCall-1.png&#34; width=&#34;800px&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;The completed class looks like this&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;waterflow &amp;lt;- R6Class(
+  &amp;quot;waterflow&amp;quot;,
+  public = list(
+    initialize = function(wall = NULL) {
+      if (is.null(wall)) {
+        stop(&amp;quot;Please provide some wall heights&amp;quot;)
+      }
+      if (!is.numeric(wall)) {
+        stop(&amp;quot;Please provide a numeric vector&amp;quot;)
+      }
+      len &amp;lt;- length(wall)
+      water &amp;lt;- rep(0, len)
+      for (i in seq_along(wall)) {
+        currentHeight &amp;lt;- wall[i]
+        maxLeftHeight &amp;lt;- if (i &amp;gt; 1) {
+          max(wall[1:(i - 1)])
+        } else {
+          0
+        }
+        maxRightHeight &amp;lt;- if (i == len) {
+          0
+        } else {
+          max(wall[(i + 1):len])
+        }
+        smallestMaxHeight &amp;lt;- min(maxLeftHeight, maxRightHeight)
+        water[i] &amp;lt;- if (smallestMaxHeight - currentHeight &amp;gt; 0) {
+          smallestMaxHeight - currentHeight
+        } else {
+          0
+        }
+      }
+      private$heights &amp;lt;- private$tidyWater(water, wall)
+    },
+    plot = function() {
+      ggplot(private$heights) +
+        geom_col(
+          aes(x = pos + 1 / 2, y = val, fill = type),
+          width = 1, show.legend = FALSE
+        ) +
+        scale_fill_manual(values = c(&amp;quot;dodgerblue2&amp;quot;, &amp;quot;grey50&amp;quot;)) +
+        scale_x_continuous(breaks = seq(0, max(private$heights$pos), 1)) +
+        theme(
+          panel.background = element_blank(),
+          panel.ontop = TRUE,
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_line(colour = &amp;quot;white&amp;quot;, size = 0.5),
+          panel.grid.major.x = element_line(colour = &amp;quot;white&amp;quot;, size = 0.5),
+          panel.grid.major.y = element_line(colour = &amp;quot;white&amp;quot;, size = 0.5),
+          axis.ticks = element_blank(),
+          text = element_blank()
+        )
+    },
+    print = function() print(private$heights),
+    total = function() {
+      sum(private$heights[private$heights$type %in% &amp;quot;water&amp;quot;, &amp;quot;val&amp;quot;])
+    }
+  ),
+  private = list(
+    heights = NULL,
+    tidyWater = function(water, wall) {
+      data.frame(
+        pos = seq_along(wall),
+        type = factor(
+          rep(c(&amp;quot;water&amp;quot;, &amp;quot;wall&amp;quot;), each = length(wall)),
+          levels = c(&amp;quot;water&amp;quot;, &amp;quot;wall&amp;quot;)
+        ),
+        val = c(water, wall)
+      )
+    }
+  )
+)&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;disadvantages-of-r6&#34; class=&#34;section level3&#34;&gt;
+&lt;h3&gt;Disadvantages of R6&lt;/h3&gt;
+&lt;p&gt;Overall &lt;code&gt;R6&lt;/code&gt; is a great package with one or two downsides but these are mostly not too worrying. For one thing, &lt;code&gt;R6&lt;/code&gt; is a separate package that users have to load or use as an import but given that it is such a lightweight package and doesn’t have any imports of its own, it’s nothing to be concerned about. Also, &lt;code&gt;R6&lt;/code&gt; doesn’t have any strict type checking but this is remedied by including your own type checking in your methods. The main bug bear I have with &lt;code&gt;R6&lt;/code&gt; is the lack of support from &lt;a href=&#34;https://github.com/klutometis/roxygen&#34;&gt;&lt;code&gt;Roxygen2&lt;/code&gt;&lt;/a&gt; out of the box and this has been an &lt;a href=&#34;https://github.com/klutometis/roxygen/issues/388&#34;&gt;open issue&lt;/a&gt; for a while.&lt;/p&gt;
+&lt;p&gt;Also posted on the &lt;a href=&#34;https://www.mango-solutions.com/blog/the-twitter-waterflow-problem&#34;&gt;Mango Solutions blog&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
