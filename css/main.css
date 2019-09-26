@@ -25,6 +25,14 @@ a {
   outline: none;
 }
 
+.inline-svg {
+  display: inline-block;
+  height: 18px;
+  width: 18px;
+  top: -2.4px;
+  position: relative;
+}
+
 code {
 }
 
