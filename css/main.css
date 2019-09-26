@@ -31,6 +31,7 @@ a {
   width: 18px;
   top: -2.4px;
   position: relative;
+  text-rendering: optimizeLegibility;
 }
 
 code {
