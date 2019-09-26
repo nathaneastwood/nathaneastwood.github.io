@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>Selecting the max value from each group, a case study: dplyr and sparklyr - Random R Ramblings</title>
+<meta property="og:title" content="Selecting the max value from each group, a case study: dplyr and sparklyr - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/nathaneastwood">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/nathaneastwood/">LinkedIn</a></li>
+    
+    <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood">Stack Overflow</a></li>
+    
+    <li><a href="https://twitter.com/nathaneastwood_">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">7 min read</span>
+    
+
+    <h1 class="article-title">Selecting the max value from each group, a case study: dplyr and sparklyr</h1>
+
+    
+    <span class="article-date">2019-09-22</span>
+    
+
+    <div class="article-content">
+      
+<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<script src="/rmarkdown-libs/proj4js/proj4.js"></script>
+<link href="/rmarkdown-libs/highcharts/css/motion.css" rel="stylesheet" />
+<link href="/rmarkdown-libs/highcharts/css/htmlwdgtgrid.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/highcharts/highcharts.js"></script>
+<script src="/rmarkdown-libs/highcharts/highcharts-3d.js"></script>
+<script src="/rmarkdown-libs/highcharts/highcharts-more.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/stock.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/map.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/annotations.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/boost.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/data.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/drag-panes.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/drilldown.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/item-series.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/offline-exporting.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/overlapping-datalabels.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/exporting.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/export-data.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/funnel.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/heatmap.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/treemap.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/sankey.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/solid-gauge.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/streamgraph.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/sunburst.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/vector.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/wordcloud.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/xrange.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/tilemap.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/venn.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/gantt.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/timeline.js"></script>
+<script src="/rmarkdown-libs/highcharts/modules/parallel-coordinates.js"></script>
+<script src="/rmarkdown-libs/highcharts/plugins/grouped-categories.js"></script>
+<script src="/rmarkdown-libs/highcharts/plugins/motion.js"></script>
+<script src="/rmarkdown-libs/highcharts/plugins/multicolor_series.js"></script>
+<script src="/rmarkdown-libs/highcharts/custom/reset.js"></script>
+<script src="/rmarkdown-libs/highcharts/custom/symbols-extra.js"></script>
+<script src="/rmarkdown-libs/highcharts/custom/text-symbols.js"></script>
+<script src="/rmarkdown-libs/highchart-binding/highchart.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In my <a href="https://nathaneastwood.github.io/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-data.table/">last post</a> we looked at how to slice a <code>data.table</code> by group to obtain the rows for which a particular column in that group is at its maximum value using the excellent <code>data.table</code> package. In this post, we will be taking a look at how to perform this task using <a href="https://github.com/tidyverse/dplyr"><code>dplyr</code></a> and <a href="https://github.com/rstudio/sparklyr"><code>sparklyr</code></a>.</p>
+</div>
+<div id="dplyr" class="section level1">
+<h1>dplyr</h1>
+<p>First, let’s take a look at our data.</p>
+<pre class="r"><code>library(dplyr)
+mtcars &lt;- mtcars %&gt;% 
+  tibble::rownames_to_column(var = &quot;car&quot;) %&gt;% 
+  tibble::as_tibble()
+mtcars
+# # A tibble: 32 x 12
+#    car      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#    &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+#  1 Mazda…  21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#  2 Mazda…  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#  3 Datsu…  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1
+#  4 Horne…  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#  5 Horne…  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#  6 Valia…  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#  7 Duste…  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#  8 Merc …  24.4     4  147.    62  3.69  3.19  20       1     0     4     2
+#  9 Merc …  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
+# 10 Merc …  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+# # … with 22 more rows</code></pre>
+<p>So here, we are interested in getting a single car from each <code>cyl</code> group whose <code>mpg</code> is at the maximum for that group. I really like the <code>dplyr</code> syntax for this problem, it’s really straight forward; take a look below:</p>
+<pre class="r"><code>mtcars %&gt;% 
+  group_by(cyl) %&gt;% 
+  arrange(desc(mpg)) %&gt;% 
+  slice(1) %&gt;% 
+  ungroup()
+# # A tibble: 3 x 12
+#   car       mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+# 1 Toyota…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 2 Hornet…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
+# 3 Pontia…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2</code></pre>
+<p>We tell <code>dplyr</code> to create groups of data for each of the <code>cyl</code> levels and then within each group we <code>arrange()</code> by <code>mpg</code> in descending order. Once we have our data organised in this way it’s as simple as taking the top row from each group using <code>slice()</code>. Of course there is more than one way we can achieve this task using <code>dplyr</code>, take this next example for instance.</p>
+<pre class="r"><code>mtcars %&gt;% 
+  group_by(cyl) %&gt;% 
+  arrange(desc(mpg)) %&gt;% 
+  mutate(row_number = row_number()) %&gt;% 
+  filter(row_number == 1) %&gt;% 
+  select(-row_number) %&gt;% 
+  ungroup()
+# # A tibble: 3 x 12
+#   car       mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+# 1 Toyota…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 2 Hornet…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
+# 3 Pontia…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2</code></pre>
+<p>It might not seem to be the most logical approach to this problem given we have access to the <code>slice()</code> function but it feeds nicely into the <a href="#sparklyr"><code>sparklyr</code></a> section.</p>
+<p>If you are interested, below you can see the benchmarks for these two <code>dplyr</code> approaches. We can see that the <code>slice()</code> approach is much quicker than the <code>mutate()</code> approach which we would expect since there is much less manipulation of the data going on in the first approach.</p>
+<div id="htmlwidget-1" style="width:100%;height:500px;" class="highchart html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"hc_opts":{"title":{"text":"<b>data.table Solutions<b>"},"yAxis":{"title":{"text":"<b> Time (ns)<b>"}},"credits":{"enabled":false},"exporting":{"enabled":false},"plotOptions":{"series":{"label":{"enabled":false},"turboThreshold":0,"marker":{"symbol":"circle"},"showInLegend":false},"treemap":{"layoutAlgorithm":"squarified"}},"chart":{"type":"column"},"xAxis":{"type":"category","categories":""},"series":[{"g2":null,"data":[{"name":"slice","low":783836,"q1":1432169,"median":1787723.5,"q3":3899602.5,"high":6866242},{"name":"mutate","low":2896474,"q1":4390216.5,"median":5379481.5,"q3":8039500.5,"high":12953443}],"type":"boxplot","id":null,"name":"Solution","color":"#6272a4","fillColor":"#f8f8f2","lineWidth":1.5}]},"theme":{"chart":{"backgroundColor":"transparent"}},"conf_opts":{"global":{"Date":null,"VMLRadialGradientURL":"http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png","canvasToolsURL":"http =//code.highcharts.com/list(version)/modules/canvas-tools.js","getTimezoneOffset":null,"timezoneOffset":0,"useUTC":true},"lang":{"contextButtonTitle":"Chart context menu","decimalPoint":".","downloadJPEG":"Download JPEG image","downloadPDF":"Download PDF document","downloadPNG":"Download PNG image","downloadSVG":"Download SVG vector image","drillUpText":"Back to {series.name}","invalidDate":null,"loading":"Loading...","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"noData":"No data to display","numericSymbols":["k","M","G","T","P","E"],"printChart":"Print chart","resetZoom":"Reset zoom","resetZoomTitle":"Reset zoom level 1:1","shortMonths":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"thousandsSep":" ","weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]}},"type":"chart","fonts":[],"debug":false},"evals":[],"jsHooks":[]}</script>
+</div>
+<div id="sparklyr" class="section level1">
+<h1><code>sparklyr</code></h1>
+<p>A great feature of <code>dplyr</code> is its ability to execute your R code on a Spark cluster. To achieve this, <code>dplyr</code> uses the <a href="https://github.com/tidyverse/dbplyr"><code>dbplyr</code></a> package which translates your <code>dplyr</code> code into Spark SQL code which can then be passed to the Spark connection to be executed by your Spark cluster. The problem, however, is that not all <code>dplyr</code> verbs translate.</p>
+<p>First, let’s set up a local Spark cluster and upload the <code>mtcars</code> data to it.</p>
+<pre class="r"><code>library(sparklyr)
+sc &lt;- spark_connect(master = &quot;local&quot;)
+mtcars_spark &lt;- copy_to(sc, mtcars, &quot;mtcars&quot;)</code></pre>
+<p>Now we can explore our first <code>dplyr</code> example by attempting to execute it on the Spark cluster. We use <code>dbplyr::sql_render()</code> as the final part of the chain to try and see the SQL code that <code>dbplyr</code> translates the <code>dplyr</code> code to.</p>
+<pre class="r"><code>mtcars_spark %&gt;% 
+  group_by(cyl) %&gt;% 
+  arrange(desc(mpg)) %&gt;% 
+  slice(1) %&gt;% 
+  ungroup() %&gt;% 
+  dbplyr::sql_render()
+# Error in slice_.tbl_spark(.data, .dots = compat_as_lazy_dots(...)): Slice is not supported in this version of sparklyr</code></pre>
+<p>In this instance, <code>dplyr</code> tells us that we cannot use <code>slice()</code> since it is not currently supported by <code>sparklyr</code>, this is because there is no direct translation from <code>slice()</code> to Spark SQL code. So let’s try our second approach.</p>
+<pre class="r"><code>mtcars_spark %&gt;% 
+  group_by(cyl) %&gt;% 
+  arrange(desc(mpg)) %&gt;% 
+  mutate(row_number = row_number()) %&gt;% 
+  filter(row_number == 1) %&gt;% 
+  select(-row_number) %&gt;% 
+  ungroup() %&gt;% 
+  dbplyr::sql_render()
+# &lt;SQL&gt; SELECT `car`, `mpg`, `cyl`, `disp`, `hp`, `drat`, `wt`, `qsec`, `vs`, `am`, `gear`, `carb`
+# FROM (SELECT `car`, `mpg`, `cyl`, `disp`, `hp`, `drat`, `wt`, `qsec`, `vs`, `am`, `gear`, `carb`, ROW_NUMBER() OVER (PARTITION BY `cyl` ORDER BY `mpg` DESC) AS `row_number`
+# FROM (SELECT *
+# FROM `mtcars`
+# ORDER BY `mpg` DESC) `dbplyr_001`) `dbplyr_002`
+# WHERE (`row_number` = 1.0)</code></pre>
+<p>Here we see that the function <code>row_number()</code> does translate; since it is a ranking function which mimics the functions described in SQL2003 (see <code>?ranking</code>), <code>dbplyr</code> knows the equivalent SQL code.</p>
+<pre class="r"><code>mtcars_spark %&gt;% 
+  group_by(cyl) %&gt;% 
+  arrange(desc(mpg)) %&gt;% 
+  mutate(row_number = row_number()) %&gt;% 
+  filter(row_number == 1) %&gt;% 
+  select(-row_number) %&gt;% 
+  ungroup() %&gt;% 
+  collect()
+# # A tibble: 3 x 12
+#   car       mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+# 1 Hornet…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
+# 2 Toyota…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 3 Pontia…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2</code></pre>
+<p>So really when it comes to using <code>dplyr</code> for data manipulation in Spark it sometimes requires some persistence in finding a function which will translate nicely to Spark SQL, especially if you don’t want to use the often slow <code>spark_apply()</code> function to apply an R function to a Spark object. Although I would recommend reading the <a href="https://spark.rstudio.com/dplyr/"><code>sparklyr</code> documentation</a>, it can often be a little light on the details and so for a more detailed look at how to send R code to be executed on your Spark cluster, check out my colleague Jozef’s <a href="https://jozef.io/r201-spark-r-1/#an-r-function-translated-to-spark-sql">blog post</a>.</p>
+<p>As a side note, should you not be able to find an R function which will translate to SQL code, it is always worth checking out the list of <a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF">Hive Operators and User-Defined Functions (UDFs)</a>. UDFs are functions that are built for specific purposes to perform operations like Mathematical, arithmetic, logical and relational on the operands of table column names.</p>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>This concludes this series of blog posts in which we have seen how we can select a single row from a <code>data.frame</code>, <code>data.table</code> or <code>tibble</code> for each group, where a column in that group is at the maximum value for its group. In this post, we saw how this task is quite easy to do with <code>dplyr</code>’s <code>group_by()</code> and <code>slice()</code> combination of functions. We then saw how we can translate our <code>dplyr</code> code to be executed as SQL code on a Spark cluster; though not all <code>dplyr</code> “verbs” currently translate into SQL. To that end, it is often worth looking to see if there is a Hive User-Defined Function to perform the data manipulation task at hand if there is not a direct translation of a <code>dplyr</code> function.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

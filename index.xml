@@ -5,10 +5,173 @@
     <description>Recent content on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Sat, 14 Sep 2019 19:13:14 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 22 Sep 2019 20:13:14 -0500</lastBuildDate>
     
         <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Selecting the max value from each group, a case study: dplyr and sparklyr</title>
+      <link>/2019/09/22/selecting-the-max-value-from-each-group-a-case-study-dplyr-and-sparklyr/</link>
+      <pubDate>Sun, 22 Sep 2019 20:13:14 -0500</pubDate>
+      
+      <guid>/2019/09/22/selecting-the-max-value-from-each-group-a-case-study-dplyr-and-sparklyr/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/htmlwidgets/htmlwidgets.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/jquery/jquery.min.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/proj4js/proj4.js&#34;&gt;&lt;/script&gt;
+&lt;link href=&#34;/rmarkdown-libs/highcharts/css/motion.css&#34; rel=&#34;stylesheet&#34; /&gt;
+&lt;link href=&#34;/rmarkdown-libs/highcharts/css/htmlwdgtgrid.css&#34; rel=&#34;stylesheet&#34; /&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-3d.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-more.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/stock.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/map.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/annotations.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/boost.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/data.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drag-panes.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drilldown.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/item-series.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/offline-exporting.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/overlapping-datalabels.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/exporting.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/export-data.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/funnel.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/heatmap.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/treemap.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sankey.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/solid-gauge.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/streamgraph.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sunburst.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/vector.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/wordcloud.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/xrange.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/tilemap.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/venn.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/gantt.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/timeline.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/parallel-coordinates.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/grouped-categories.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/motion.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/multicolor_series.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/reset.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/symbols-extra.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/text-symbols.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highchart-binding/highchart.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;In my &lt;a href=&#34;https://nathaneastwood.github.io/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-data.table/&#34;&gt;last post&lt;/a&gt; we looked at how to slice a &lt;code&gt;data.table&lt;/code&gt; by group to obtain the rows for which a particular column in that group is at its maximum value using the excellent &lt;code&gt;data.table&lt;/code&gt; package. In this post, we will be taking a look at how to perform this task using &lt;a href=&#34;https://github.com/tidyverse/dplyr&#34;&gt;&lt;code&gt;dplyr&lt;/code&gt;&lt;/a&gt; and &lt;a href=&#34;https://github.com/rstudio/sparklyr&#34;&gt;&lt;code&gt;sparklyr&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;dplyr&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;dplyr&lt;/h1&gt;
+&lt;p&gt;First, let’s take a look at our data.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
+mtcars &amp;lt;- mtcars %&amp;gt;% 
+  tibble::rownames_to_column(var = &amp;quot;car&amp;quot;) %&amp;gt;% 
+  tibble::as_tibble()
+mtcars
+# # A tibble: 32 x 12
+#    car      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#    &amp;lt;chr&amp;gt;  &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
+#  1 Mazda…  21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#  2 Mazda…  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#  3 Datsu…  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1
+#  4 Horne…  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#  5 Horne…  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#  6 Valia…  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#  7 Duste…  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#  8 Merc …  24.4     4  147.    62  3.69  3.19  20       1     0     4     2
+#  9 Merc …  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
+# 10 Merc …  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+# # … with 22 more rows&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So here, we are interested in getting a single car from each &lt;code&gt;cyl&lt;/code&gt; group whose &lt;code&gt;mpg&lt;/code&gt; is at the maximum for that group. I really like the &lt;code&gt;dplyr&lt;/code&gt; syntax for this problem, it’s really straight forward; take a look below:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% 
+  group_by(cyl) %&amp;gt;% 
+  arrange(desc(mpg)) %&amp;gt;% 
+  slice(1) %&amp;gt;% 
+  ungroup()
+# # A tibble: 3 x 12
+#   car       mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &amp;lt;chr&amp;gt;   &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
+# 1 Toyota…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 2 Hornet…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
+# 3 Pontia…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We tell &lt;code&gt;dplyr&lt;/code&gt; to create groups of data for each of the &lt;code&gt;cyl&lt;/code&gt; levels and then within each group we &lt;code&gt;arrange()&lt;/code&gt; by &lt;code&gt;mpg&lt;/code&gt; in descending order. Once we have our data organised in this way it’s as simple as taking the top row from each group using &lt;code&gt;slice()&lt;/code&gt;. Of course there is more than one way we can achieve this task using &lt;code&gt;dplyr&lt;/code&gt;, take this next example for instance.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% 
+  group_by(cyl) %&amp;gt;% 
+  arrange(desc(mpg)) %&amp;gt;% 
+  mutate(row_number = row_number()) %&amp;gt;% 
+  filter(row_number == 1) %&amp;gt;% 
+  select(-row_number) %&amp;gt;% 
+  ungroup()
+# # A tibble: 3 x 12
+#   car       mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &amp;lt;chr&amp;gt;   &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
+# 1 Toyota…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 2 Hornet…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
+# 3 Pontia…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It might not seem to be the most logical approach to this problem given we have access to the &lt;code&gt;slice()&lt;/code&gt; function but it feeds nicely into the &lt;a href=&#34;#sparklyr&#34;&gt;&lt;code&gt;sparklyr&lt;/code&gt;&lt;/a&gt; section.&lt;/p&gt;
+&lt;p&gt;If you are interested, below you can see the benchmarks for these two &lt;code&gt;dplyr&lt;/code&gt; approaches. We can see that the &lt;code&gt;slice()&lt;/code&gt; approach is much quicker than the &lt;code&gt;mutate()&lt;/code&gt; approach which we would expect since there is much less manipulation of the data going on in the first approach.&lt;/p&gt;
+&lt;div id=&#34;htmlwidget-1&#34; style=&#34;width:100%;height:500px;&#34; class=&#34;highchart html-widget&#34;&gt;&lt;/div&gt;
+&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;chart&#34;:{&#34;type&#34;:&#34;column&#34;},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;slice&#34;,&#34;low&#34;:783836,&#34;q1&#34;:1432169,&#34;median&#34;:1787723.5,&#34;q3&#34;:3899602.5,&#34;high&#34;:6866242},{&#34;name&#34;:&#34;mutate&#34;,&#34;low&#34;:2896474,&#34;q1&#34;:4390216.5,&#34;median&#34;:5379481.5,&#34;q3&#34;:8039500.5,&#34;high&#34;:12953443}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;}},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
+&lt;/div&gt;
+&lt;div id=&#34;sparklyr&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;&lt;code&gt;sparklyr&lt;/code&gt;&lt;/h1&gt;
+&lt;p&gt;A great feature of &lt;code&gt;dplyr&lt;/code&gt; is its ability to execute your R code on a Spark cluster. To achieve this, &lt;code&gt;dplyr&lt;/code&gt; uses the &lt;a href=&#34;https://github.com/tidyverse/dbplyr&#34;&gt;&lt;code&gt;dbplyr&lt;/code&gt;&lt;/a&gt; package which translates your &lt;code&gt;dplyr&lt;/code&gt; code into Spark SQL code which can then be passed to the Spark connection to be executed by your Spark cluster. The problem, however, is that not all &lt;code&gt;dplyr&lt;/code&gt; verbs translate.&lt;/p&gt;
+&lt;p&gt;First, let’s set up a local Spark cluster and upload the &lt;code&gt;mtcars&lt;/code&gt; data to it.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(sparklyr)
+sc &amp;lt;- spark_connect(master = &amp;quot;local&amp;quot;)
+mtcars_spark &amp;lt;- copy_to(sc, mtcars, &amp;quot;mtcars&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we can explore our first &lt;code&gt;dplyr&lt;/code&gt; example by attempting to execute it on the Spark cluster. We use &lt;code&gt;dbplyr::sql_render()&lt;/code&gt; as the final part of the chain to try and see the SQL code that &lt;code&gt;dbplyr&lt;/code&gt; translates the &lt;code&gt;dplyr&lt;/code&gt; code to.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars_spark %&amp;gt;% 
+  group_by(cyl) %&amp;gt;% 
+  arrange(desc(mpg)) %&amp;gt;% 
+  slice(1) %&amp;gt;% 
+  ungroup() %&amp;gt;% 
+  dbplyr::sql_render()
+# Error in slice_.tbl_spark(.data, .dots = compat_as_lazy_dots(...)): Slice is not supported in this version of sparklyr&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In this instance, &lt;code&gt;dplyr&lt;/code&gt; tells us that we cannot use &lt;code&gt;slice()&lt;/code&gt; since it is not currently supported by &lt;code&gt;sparklyr&lt;/code&gt;, this is because there is no direct translation from &lt;code&gt;slice()&lt;/code&gt; to Spark SQL code. So let’s try our second approach.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars_spark %&amp;gt;% 
+  group_by(cyl) %&amp;gt;% 
+  arrange(desc(mpg)) %&amp;gt;% 
+  mutate(row_number = row_number()) %&amp;gt;% 
+  filter(row_number == 1) %&amp;gt;% 
+  select(-row_number) %&amp;gt;% 
+  ungroup() %&amp;gt;% 
+  dbplyr::sql_render()
+# &amp;lt;SQL&amp;gt; SELECT `car`, `mpg`, `cyl`, `disp`, `hp`, `drat`, `wt`, `qsec`, `vs`, `am`, `gear`, `carb`
+# FROM (SELECT `car`, `mpg`, `cyl`, `disp`, `hp`, `drat`, `wt`, `qsec`, `vs`, `am`, `gear`, `carb`, ROW_NUMBER() OVER (PARTITION BY `cyl` ORDER BY `mpg` DESC) AS `row_number`
+# FROM (SELECT *
+# FROM `mtcars`
+# ORDER BY `mpg` DESC) `dbplyr_001`) `dbplyr_002`
+# WHERE (`row_number` = 1.0)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here we see that the function &lt;code&gt;row_number()&lt;/code&gt; does translate; since it is a ranking function which mimics the functions described in SQL2003 (see &lt;code&gt;?ranking&lt;/code&gt;), &lt;code&gt;dbplyr&lt;/code&gt; knows the equivalent SQL code.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars_spark %&amp;gt;% 
+  group_by(cyl) %&amp;gt;% 
+  arrange(desc(mpg)) %&amp;gt;% 
+  mutate(row_number = row_number()) %&amp;gt;% 
+  filter(row_number == 1) %&amp;gt;% 
+  select(-row_number) %&amp;gt;% 
+  ungroup() %&amp;gt;% 
+  collect()
+# # A tibble: 3 x 12
+#   car       mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &amp;lt;chr&amp;gt;   &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
+# 1 Hornet…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
+# 2 Toyota…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 3 Pontia…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So really when it comes to using &lt;code&gt;dplyr&lt;/code&gt; for data manipulation in Spark it sometimes requires some persistence in finding a function which will translate nicely to Spark SQL, especially if you don’t want to use the often slow &lt;code&gt;spark_apply()&lt;/code&gt; function to apply an R function to a Spark object. Although I would recommend reading the &lt;a href=&#34;https://spark.rstudio.com/dplyr/&#34;&gt;&lt;code&gt;sparklyr&lt;/code&gt; documentation&lt;/a&gt;, it can often be a little light on the details and so for a more detailed look at how to send R code to be executed on your Spark cluster, check out my colleague Jozef’s &lt;a href=&#34;https://jozef.io/r201-spark-r-1/#an-r-function-translated-to-spark-sql&#34;&gt;blog post&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;As a side note, should you not be able to find an R function which will translate to SQL code, it is always worth checking out the list of &lt;a href=&#34;https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF&#34;&gt;Hive Operators and User-Defined Functions (UDFs)&lt;/a&gt;. UDFs are functions that are built for specific purposes to perform operations like Mathematical, arithmetic, logical and relational on the operands of table column names.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;This concludes this series of blog posts in which we have seen how we can select a single row from a &lt;code&gt;data.frame&lt;/code&gt;, &lt;code&gt;data.table&lt;/code&gt; or &lt;code&gt;tibble&lt;/code&gt; for each group, where a column in that group is at the maximum value for its group. In this post, we saw how this task is quite easy to do with &lt;code&gt;dplyr&lt;/code&gt;’s &lt;code&gt;group_by()&lt;/code&gt; and &lt;code&gt;slice()&lt;/code&gt; combination of functions. We then saw how we can translate our &lt;code&gt;dplyr&lt;/code&gt; code to be executed as SQL code on a Spark cluster; though not all &lt;code&gt;dplyr&lt;/code&gt; “verbs” currently translate into SQL. To that end, it is often worth looking to see if there is a Hive User-Defined Function to perform the data manipulation task at hand if there is not a direct translation of a &lt;code&gt;dplyr&lt;/code&gt; function.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>Selecting the max value from each group, a case study: data.table</title>
@@ -63,16 +226,13 @@
 
 &lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;Introduction&lt;/h1&gt;
-&lt;p&gt;In my &lt;a href=&#34;https://nathaneastwood.github.io/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-base-r/&#34;&gt;last post&lt;/a&gt; we looked at how to slice a &lt;code&gt;data.frame&lt;/code&gt; by group to obtain the rows for which a particular column in that group is at its maximum value sing base R. In this post, we will be taking a look at how to perform this task using &lt;a href=&#34;https://github.com/Rdatatable/data.table&#34;&gt;&lt;code&gt;data.table&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;In my &lt;a href=&#34;https://nathaneastwood.github.io/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-base-r/&#34;&gt;last post&lt;/a&gt; we looked at how to slice a &lt;code&gt;data.frame&lt;/code&gt; by group to obtain the rows for which a particular column in that group is at its maximum value using base R. In this post, we will be taking a look at how to perform this task using &lt;a href=&#34;https://github.com/Rdatatable/data.table&#34;&gt;&lt;code&gt;data.table&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div id=&#34;data.table-solutions&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;&lt;code&gt;data.table&lt;/code&gt; Solution(s)&lt;/h1&gt;
 &lt;p&gt;For this exercise we will be using &lt;code&gt;datasets::mtcars&lt;/code&gt; and so first, we must convert &lt;code&gt;mtcars&lt;/code&gt; to a &lt;code&gt;data.table&lt;/code&gt;.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(data.table)
-mtcars_colnames &amp;lt;- colnames(mtcars)
-mtcars[, &amp;quot;car&amp;quot;] &amp;lt;- rownames(mtcars)
-mtcars &amp;lt;- mtcars[, c(&amp;quot;car&amp;quot;, mtcars_colnames)]
-mtcars &amp;lt;- as.data.table(mtcars)&lt;/code&gt;&lt;/pre&gt;
+mtcars &amp;lt;- as.data.table(mtcars, keep.rownames = &amp;quot;car&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;The current &lt;code&gt;data.table&lt;/code&gt; syntax suggests that when grouping data, we should use the &lt;code&gt;.SD&lt;/code&gt; syntax. &lt;code&gt;.SD&lt;/code&gt; stands for “&lt;code&gt;S&lt;/code&gt;ubset of &lt;code&gt;D&lt;/code&gt;ata.table”, so when we group the data &lt;code&gt;by&lt;/code&gt; a variable, we are creating subsets of the data. Note that there’s &lt;a href=&#34;https://stackoverflow.com/a/8509301/3759418&#34;&gt;no significance&lt;/a&gt; to the initial &lt;code&gt;.&lt;/code&gt;, except that it makes it slightly more unlikely that there will be a clash with a user-defined column name. So, one approach to solving our problem can be seen below.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars[, .SD[which.max(mpg)], by = cyl]
 #    cyl              car  mpg  disp  hp drat    wt  qsec vs am gear carb
@@ -107,7 +267,7 @@ mtcars &amp;lt;- as.data.table(mtcars)&lt;/code&gt;&lt;/pre&gt;
 &lt;h1&gt;Benchmarks&lt;/h1&gt;
 &lt;p&gt;Now this wouldn’t be a completely informative blog post without some benchmarks. In fact these three options are what inspired me to write this series of posts. We can see the results of the benchmarking below.&lt;/p&gt;
 &lt;div id=&#34;htmlwidget-1&#34; style=&#34;width:100%;height:500px;&#34; class=&#34;highchart html-widget&#34;&gt;&lt;/div&gt;
-&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;chart&#34;:{&#34;type&#34;:&#34;column&#34;},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;.SD&#34;,&#34;low&#34;:657449,&#34;q1&#34;:719847.5,&#34;median&#34;:845022.5,&#34;q3&#34;:918745.5,&#34;high&#34;:1203749},{&#34;name&#34;:&#34;.I&#34;,&#34;low&#34;:439345,&#34;q1&#34;:478373.5,&#34;median&#34;:505032.5,&#34;q3&#34;:592551,&#34;high&#34;:696226},{&#34;name&#34;:&#34;rbindlist&#34;,&#34;low&#34;:1072451,&#34;q1&#34;:1198851,&#34;median&#34;:1425840,&#34;q3&#34;:1562830.5,&#34;high&#34;:1994344}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;}},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
+&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;chart&#34;:{&#34;type&#34;:&#34;column&#34;},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;.SD&#34;,&#34;low&#34;:593695,&#34;q1&#34;:737109,&#34;median&#34;:822789,&#34;q3&#34;:976268,&#34;high&#34;:1329638},{&#34;name&#34;:&#34;.I&#34;,&#34;low&#34;:415478,&#34;q1&#34;:537352.5,&#34;median&#34;:638516,&#34;q3&#34;:768372.5,&#34;high&#34;:1081980},{&#34;name&#34;:&#34;rbindlist&#34;,&#34;low&#34;:981277,&#34;q1&#34;:1252721.5,&#34;median&#34;:1404874,&#34;q3&#34;:1618427,&#34;high&#34;:2149463}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;}},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
 &lt;p&gt;We can see that, on average, the &lt;code&gt;.I&lt;/code&gt; solution is fastest. So you may be wondering, if the &lt;code&gt;.SD&lt;/code&gt; syntax is the newer syntax, why then is the &lt;code&gt;.I&lt;/code&gt; code quicker? Well it’s simply because &lt;code&gt;.SD&lt;/code&gt; has &lt;a href=&#34;https://github.com/Rdatatable/data.table/issues/735&#34;&gt;not yet been completely optimised&lt;/a&gt;. &lt;code&gt;.I&lt;/code&gt; avoids constructing &lt;code&gt;.SD&lt;/code&gt;, which is the bottleneck in the &lt;code&gt;.SD&lt;/code&gt; solution.&lt;/p&gt;
 &lt;p&gt;As a side note, we could speed these results up even more with &lt;code&gt;data.table::setkey(mtcars, cyl)&lt;/code&gt;. I won’t show the benchmarking results here as the data is so small it isn’t really a useful representation but it is worth considering should you need to perform a similar task on a larger dataset.&lt;/p&gt;
 &lt;/div&gt;
@@ -115,7 +275,7 @@ mtcars &amp;lt;- as.data.table(mtcars)&lt;/code&gt;&lt;/pre&gt;
 &lt;h1&gt;Conclusion&lt;/h1&gt;
 &lt;p&gt;If you need to apply some function to each group within a &lt;code&gt;data.table&lt;/code&gt;, &lt;code&gt;data.table&lt;/code&gt; has many solutions. The newest solution, &lt;code&gt;.SD&lt;/code&gt;, may not always be the fastest approach and you should try the old &lt;code&gt;.I&lt;/code&gt; approach if speed is important.&lt;/p&gt;
 &lt;p&gt;Are you aware of any other &lt;code&gt;data.table&lt;/code&gt; solutions to this problem? If so, let me know in the comments!&lt;/p&gt;
-&lt;p&gt;Next time, we will take a look at how to solve this problem in &lt;code&gt;dplyr&lt;/code&gt; as well as &lt;code&gt;sparklyr&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://nathaneastwood.github.io/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-dplyr-and-sparklyr/&#34;&gt;Next time&lt;/a&gt;, we will take a look at how to solve this problem in &lt;code&gt;dplyr&lt;/code&gt; as well as &lt;code&gt;sparklyr&lt;/code&gt;.&lt;/p&gt;
 &lt;/div&gt;
 </description>
     </item>
