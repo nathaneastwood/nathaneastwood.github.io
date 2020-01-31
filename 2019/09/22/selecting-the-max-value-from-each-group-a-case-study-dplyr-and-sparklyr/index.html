@@ -6,8 +6,8 @@
 <meta name="generator" content="Hugo 0.56.3" />
 
 
-<title>Selecting the max value from each group, a case study: dplyr and sparklyr - Random R Ramblings</title>
-<meta property="og:title" content="Selecting the max value from each group, a case study: dplyr and sparklyr - Random R Ramblings">
+<title>Selecting the Max Value from Each Group, a Case Study: dplyr and sparklyr - Random R Ramblings</title>
+<meta property="og:title" content="Selecting the Max Value from Each Group, a Case Study: dplyr and sparklyr - Random R Ramblings">
 
 
 
@@ -73,7 +73,7 @@
     <span class="article-duration">7 min read</span>
     
 
-    <h1 class="article-title">Selecting the max value from each group, a case study: dplyr and sparklyr</h1>
+    <h1 class="article-title">Selecting the Max Value from Each Group, a Case Study: dplyr and sparklyr</h1>
 
     
     <span class="article-date">2019-09-22</span>
@@ -138,18 +138,18 @@ mtcars &lt;- mtcars %&gt;%
   tibble::as_tibble()
 mtcars
 # # A tibble: 32 x 12
-#    car      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
-#    &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-#  1 Mazda…  21       6  160    110  3.9   2.62  16.5     0     1     4     4
-#  2 Mazda…  21       6  160    110  3.9   2.88  17.0     0     1     4     4
-#  3 Datsu…  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1
-#  4 Horne…  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
-#  5 Horne…  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
-#  6 Valia…  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
-#  7 Duste…  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
-#  8 Merc …  24.4     4  147.    62  3.69  3.19  20       1     0     4     2
-#  9 Merc …  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
-# 10 Merc …  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+#    car           mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#    &lt;chr&gt;       &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+#  1 Mazda RX4    21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#  2 Mazda RX4 …  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#  3 Datsun 710   22.8     4  108     93  3.85  2.32  18.6     1     1     4     1
+#  4 Hornet 4 D…  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#  5 Hornet Spo…  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#  6 Valiant      18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#  7 Duster 360   14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#  8 Merc 240D    24.4     4  147.    62  3.69  3.19  20       1     0     4     2
+#  9 Merc 230     22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2
+# 10 Merc 280     19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
 # # … with 22 more rows</code></pre>
 <p>So here, we are interested in getting a single car from each <code>cyl</code> group whose <code>mpg</code> is at the maximum for that group. I really like the <code>dplyr</code> syntax for this problem, it’s really straight forward; take a look below:</p>
 <pre class="r"><code>mtcars %&gt;% 
@@ -158,11 +158,11 @@ mtcars
   slice(1) %&gt;% 
   ungroup()
 # # A tibble: 3 x 12
-#   car       mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
-#   &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-# 1 Toyota…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
-# 2 Hornet…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
-# 3 Pontia…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2</code></pre>
+#   car            mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+# 1 Toyota Coro…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 2 Hornet 4 Dr…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
+# 3 Pontiac Fir…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2</code></pre>
 <p>We tell <code>dplyr</code> to create groups of data for each of the <code>cyl</code> levels and then within each group we <code>arrange()</code> by <code>mpg</code> in descending order. Once we have our data organised in this way it’s as simple as taking the top row from each group using <code>slice()</code>. Of course there is more than one way we can achieve this task using <code>dplyr</code>, take this next example for instance.</p>
 <pre class="r"><code>mtcars %&gt;% 
   group_by(cyl) %&gt;% 
@@ -172,15 +172,15 @@ mtcars
   select(-row_number) %&gt;% 
   ungroup()
 # # A tibble: 3 x 12
-#   car       mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
-#   &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-# 1 Toyota…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
-# 2 Hornet…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
-# 3 Pontia…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2</code></pre>
+#   car            mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+# 1 Toyota Coro…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 2 Hornet 4 Dr…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
+# 3 Pontiac Fir…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2</code></pre>
 <p>It might not seem to be the most logical approach to this problem given we have access to the <code>slice()</code> function but it feeds nicely into the <a href="#sparklyr"><code>sparklyr</code></a> section.</p>
 <p>If you are interested, below you can see the benchmarks for these two <code>dplyr</code> approaches. We can see that the <code>slice()</code> approach is much quicker than the <code>mutate()</code> approach which we would expect since there is much less manipulation of the data going on in the first approach.</p>
 <div id="htmlwidget-1" style="width:100%;height:500px;" class="highchart html-widget"></div>
-<script type="application/json" data-for="htmlwidget-1">{"x":{"hc_opts":{"title":{"text":"<b>data.table Solutions<b>"},"yAxis":{"title":{"text":"<b> Time (ns)<b>"}},"credits":{"enabled":false},"exporting":{"enabled":false},"plotOptions":{"series":{"label":{"enabled":false},"turboThreshold":0,"marker":{"symbol":"circle"},"showInLegend":false},"treemap":{"layoutAlgorithm":"squarified"}},"chart":{"type":"column"},"xAxis":{"type":"category","categories":""},"series":[{"g2":null,"data":[{"name":"slice","low":783836,"q1":1432169,"median":1787723.5,"q3":3899602.5,"high":6866242},{"name":"mutate","low":2896474,"q1":4390216.5,"median":5379481.5,"q3":8039500.5,"high":12953443}],"type":"boxplot","id":null,"name":"Solution","color":"#6272a4","fillColor":"#f8f8f2","lineWidth":1.5}]},"theme":{"chart":{"backgroundColor":"transparent"}},"conf_opts":{"global":{"Date":null,"VMLRadialGradientURL":"http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png","canvasToolsURL":"http =//code.highcharts.com/list(version)/modules/canvas-tools.js","getTimezoneOffset":null,"timezoneOffset":0,"useUTC":true},"lang":{"contextButtonTitle":"Chart context menu","decimalPoint":".","downloadJPEG":"Download JPEG image","downloadPDF":"Download PDF document","downloadPNG":"Download PNG image","downloadSVG":"Download SVG vector image","drillUpText":"Back to {series.name}","invalidDate":null,"loading":"Loading...","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"noData":"No data to display","numericSymbols":["k","M","G","T","P","E"],"printChart":"Print chart","resetZoom":"Reset zoom","resetZoomTitle":"Reset zoom level 1:1","shortMonths":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"thousandsSep":" ","weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]}},"type":"chart","fonts":[],"debug":false},"evals":[],"jsHooks":[]}</script>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"hc_opts":{"title":{"text":"<b>data.table Solutions<b>"},"yAxis":{"title":{"text":"<b> Time (ns)<b>"}},"credits":{"enabled":false},"exporting":{"enabled":false},"plotOptions":{"series":{"label":{"enabled":false},"turboThreshold":0,"marker":{"symbol":"circle"},"showInLegend":false},"treemap":{"layoutAlgorithm":"squarified"}},"chart":{"type":"column"},"xAxis":{"type":"category","categories":""},"series":[{"g2":null,"data":[{"name":"slice","low":618012,"q1":633643,"median":647378.5,"q3":784681.5,"high":888473},{"name":"mutate","low":1567024,"q1":1601592.5,"median":1655655.5,"q3":1982287.5,"high":2232860}],"type":"boxplot","id":null,"name":"Solution","color":"#6272a4","fillColor":"#f8f8f2","lineWidth":1.5}]},"theme":{"chart":{"backgroundColor":"transparent"}},"conf_opts":{"global":{"Date":null,"VMLRadialGradientURL":"http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png","canvasToolsURL":"http =//code.highcharts.com/list(version)/modules/canvas-tools.js","getTimezoneOffset":null,"timezoneOffset":0,"useUTC":true},"lang":{"contextButtonTitle":"Chart context menu","decimalPoint":".","downloadJPEG":"Download JPEG image","downloadPDF":"Download PDF document","downloadPNG":"Download PNG image","downloadSVG":"Download SVG vector image","drillUpText":"Back to {series.name}","invalidDate":null,"loading":"Loading...","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"noData":"No data to display","numericSymbols":["k","M","G","T","P","E"],"printChart":"Print chart","resetZoom":"Reset zoom","resetZoomTitle":"Reset zoom level 1:1","shortMonths":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"thousandsSep":" ","weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]}},"type":"chart","fonts":[],"debug":false},"evals":[],"jsHooks":[]}</script>
 </div>
 <div id="sparklyr" class="section level1">
 <h1><code>sparklyr</code></h1>
@@ -222,11 +222,11 @@ mtcars_spark &lt;- copy_to(sc, mtcars, &quot;mtcars&quot;)</code></pre>
   ungroup() %&gt;% 
   collect()
 # # A tibble: 3 x 12
-#   car       mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
-#   &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-# 1 Hornet…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
-# 2 Toyota…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
-# 3 Pontia…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2</code></pre>
+#   car            mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+# 1 Hornet 4 Dr…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
+# 2 Toyota Coro…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 3 Pontiac Fir…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2</code></pre>
 <p>So really when it comes to using <code>dplyr</code> for data manipulation in Spark it sometimes requires some persistence in finding a function which will translate nicely to Spark SQL, especially if you don’t want to use the often slow <code>spark_apply()</code> function to apply an R function to a Spark object. Although I would recommend reading the <a href="https://spark.rstudio.com/dplyr/"><code>sparklyr</code> documentation</a>, it can often be a little light on the details and so for a more detailed look at how to send R code to be executed on your Spark cluster, check out my colleague Jozef’s <a href="https://jozef.io/r201-spark-r-1/#an-r-function-translated-to-spark-sql">blog post</a>.</p>
 <p>As a side note, should you not be able to find an R function which will translate to SQL code, it is always worth checking out the list of <a href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF">Hive Operators and User-Defined Functions (UDFs)</a>. UDFs are functions that are built for specific purposes to perform operations like Mathematical, arithmetic, logical and relational on the operands of table column names.</p>
 </div>

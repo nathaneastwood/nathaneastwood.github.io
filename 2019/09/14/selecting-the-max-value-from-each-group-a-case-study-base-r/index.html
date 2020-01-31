@@ -6,8 +6,8 @@
 <meta name="generator" content="Hugo 0.56.3" />
 
 
-<title>Selecting the max value from each group, a case study: base R - Random R Ramblings</title>
-<meta property="og:title" content="Selecting the max value from each group, a case study: base R - Random R Ramblings">
+<title>Selecting the Max Value from Each Group, a Case Study: base R - Random R Ramblings</title>
+<meta property="og:title" content="Selecting the Max Value from Each Group, a Case Study: base R - Random R Ramblings">
 
 
 
@@ -73,7 +73,7 @@
     <span class="article-duration">4 min read</span>
     
 
-    <h1 class="article-title">Selecting the max value from each group, a case study: base R</h1>
+    <h1 class="article-title">Selecting the Max Value from Each Group, a Case Study: base R</h1>
 
     
     <span class="article-date">2019-09-14</span>
@@ -165,7 +165,7 @@ max_mpg
 <div id="benchmarks" class="section level1">
 <h1>Benchmarks</h1>
 <div id="htmlwidget-1" style="width:100%;height:500px;" class="highchart html-widget"></div>
-<script type="application/json" data-for="htmlwidget-1">{"x":{"hc_opts":{"title":{"text":"<b>data.table Solutions<b>"},"yAxis":{"title":{"text":"<b> Time (ns)<b>"}},"credits":{"enabled":false},"exporting":{"enabled":false},"plotOptions":{"series":{"label":{"enabled":false},"turboThreshold":0,"marker":{"symbol":"circle"},"showInLegend":false},"treemap":{"layoutAlgorithm":"squarified"}},"chart":{"type":"column"},"xAxis":{"type":"category","categories":""},"series":[{"g2":null,"data":[{"name":"split_lapply","low":820514,"q1":872039.5,"median":924179.5,"q3":1009309.5,"high":1172535},{"name":"by","low":866562,"q1":932716,"median":972572,"q3":1105107,"high":1342055}],"type":"boxplot","id":null,"name":"Solution","color":"#6272a4","fillColor":"#f8f8f2","lineWidth":1.5}]},"theme":{"chart":{"backgroundColor":"transparent"}},"conf_opts":{"global":{"Date":null,"VMLRadialGradientURL":"http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png","canvasToolsURL":"http =//code.highcharts.com/list(version)/modules/canvas-tools.js","getTimezoneOffset":null,"timezoneOffset":0,"useUTC":true},"lang":{"contextButtonTitle":"Chart context menu","decimalPoint":".","downloadJPEG":"Download JPEG image","downloadPDF":"Download PDF document","downloadPNG":"Download PNG image","downloadSVG":"Download SVG vector image","drillUpText":"Back to {series.name}","invalidDate":null,"loading":"Loading...","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"noData":"No data to display","numericSymbols":["k","M","G","T","P","E"],"printChart":"Print chart","resetZoom":"Reset zoom","resetZoomTitle":"Reset zoom level 1:1","shortMonths":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"thousandsSep":" ","weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]}},"type":"chart","fonts":[],"debug":false},"evals":[],"jsHooks":[]}</script>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"hc_opts":{"title":{"text":"<b>data.table Solutions<b>"},"yAxis":{"title":{"text":"<b> Time (ns)<b>"}},"credits":{"enabled":false},"exporting":{"enabled":false},"plotOptions":{"series":{"label":{"enabled":false},"turboThreshold":0,"marker":{"symbol":"circle"},"showInLegend":false},"treemap":{"layoutAlgorithm":"squarified"}},"chart":{"type":"column"},"xAxis":{"type":"category","categories":""},"series":[{"g2":null,"data":[{"name":"split_lapply","low":896684,"q1":937438,"median":969807,"q3":1014800.5,"high":1099156},{"name":"by","low":928537,"q1":968404,"median":996567.5,"q3":1047470,"high":1145391}],"type":"boxplot","id":null,"name":"Solution","color":"#6272a4","fillColor":"#f8f8f2","lineWidth":1.5}]},"theme":{"chart":{"backgroundColor":"transparent"}},"conf_opts":{"global":{"Date":null,"VMLRadialGradientURL":"http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png","canvasToolsURL":"http =//code.highcharts.com/list(version)/modules/canvas-tools.js","getTimezoneOffset":null,"timezoneOffset":0,"useUTC":true},"lang":{"contextButtonTitle":"Chart context menu","decimalPoint":".","downloadJPEG":"Download JPEG image","downloadPDF":"Download PDF document","downloadPNG":"Download PNG image","downloadSVG":"Download SVG vector image","drillUpText":"Back to {series.name}","invalidDate":null,"loading":"Loading...","months":["January","February","March","April","May","June","July","August","September","October","November","December"],"noData":"No data to display","numericSymbols":["k","M","G","T","P","E"],"printChart":"Print chart","resetZoom":"Reset zoom","resetZoomTitle":"Reset zoom level 1:1","shortMonths":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"thousandsSep":" ","weekdays":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]}},"type":"chart","fonts":[],"debug":false},"evals":[],"jsHooks":[]}</script>
 </div>
 <div id="conclusion" class="section level1">
 <h1>Conclusion</h1>
