@@ -5,10 +5,137 @@
     <description>Recent content in Posts on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Sun, 22 Sep 2019 20:13:14 -0500</lastBuildDate>
+    <lastBuildDate>Sat, 01 Feb 2020 20:00:16 -0500</lastBuildDate>
     
         <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Get and Set List Elements with magrittr</title>
+      <link>/2020/02/01/get-and-set-list-elements-with-magrittr/</link>
+      <pubDate>Sat, 01 Feb 2020 20:00:16 -0500</pubDate>
+      
+      <guid>/2020/02/01/get-and-set-list-elements-with-magrittr/</guid>
+      <description>
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Did you know that the &lt;code&gt;magrittr&lt;/code&gt; pipe, &lt;code&gt;%&amp;gt;%&lt;/code&gt;, can be used for more than just &lt;code&gt;data.frame&lt;/code&gt;s and &lt;code&gt;tibble&lt;/code&gt;s? In this blog post, we look at how we can create get and set functions for list elements.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;getting-list-elements&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Getting List Elements&lt;/h1&gt;
+&lt;p&gt;First, let’s create a simple list.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;z1 &amp;lt;- list(a = pi, b = 2.718, c = 0.57721)
+z1
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 2.718
+# 
+# $c
+# [1] 0.57721&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Let’s say we want to access an element of this list, typically we would use the &lt;code&gt;[[&lt;/code&gt; function to do so.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;z1[[2]]
+# [1] 2.718&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;But let’s say we need to access this list as part of a chain using &lt;code&gt;magrittr&lt;/code&gt;’s pipe operator, &lt;code&gt;%&amp;gt;%&lt;/code&gt;. How can we do that? Well we can pipe our list into a &lt;code&gt;.&lt;/code&gt; which acts as a placeholder for the list, on which we can perform our subset.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(magrittr)
+z1 %&amp;gt;% .[[2]]
+# [1] 2.718&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Another solution is to call &lt;code&gt;[[&lt;/code&gt; using its syntactic form &lt;code&gt;[[()&lt;/code&gt; using backticks (or quotes, see &lt;code&gt;?Quotes&lt;/code&gt;).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;z1 %&amp;gt;% `[[`(2)
+# [1] 2.718&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Admittedly, these two solutions don’t look very nice. So what we can do instead is assign the &lt;code&gt;[[&lt;/code&gt; function to an object which will, in effect, be a callable wrapper function.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;get &amp;lt;- .Primitive(&amp;quot;[[&amp;quot;) # Equivalent to get &amp;lt;- `[[`
+get(z1, 2)
+# [1] 2.718&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Primitives are functions that are internally implemented by R and so &lt;code&gt;.Primitive(&#34;[[&#34;)&lt;/code&gt; tells R to dispatch to the underlying C code, which will be able to correctly identify which &lt;code&gt;[[&lt;/code&gt; method to use on the list class (see &lt;code&gt;?.Primitive&lt;/code&gt; for more details).&lt;/p&gt;
+&lt;p&gt;Since our list is now the first argument of &lt;code&gt;get()&lt;/code&gt;, we have a much “cleaner” looking way of accessing elements of a list with the &lt;code&gt;magrittr&lt;/code&gt; pipe operator than &lt;code&gt;[[&lt;/code&gt;. And so, let’s access the second element of our list using &lt;code&gt;get()&lt;/code&gt; and the &lt;code&gt;magrittr&lt;/code&gt; pipe.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;z1 %&amp;gt;% get(2)
+# [1] 2.718&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can also access the list using its names, too.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;z1 %&amp;gt;% get(&amp;quot;b&amp;quot;)
+# [1] 2.718&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It even works with recursive indexing!&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;z2 &amp;lt;- list(a = list(b = 9, c = &amp;quot;hello&amp;quot;), d = 1:5)
+z2
+# $a
+# $a$b
+# [1] 9
+# 
+# $a$c
+# [1] &amp;quot;hello&amp;quot;
+# 
+# 
+# $d
+# [1] 1 2 3 4 5
+z2 %&amp;gt;% get(c(&amp;quot;a&amp;quot;, &amp;quot;c&amp;quot;)) # equivalent to z %&amp;gt;% get(c(1, 2))
+# [1] &amp;quot;hello&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note, you may want to choose a better name than &lt;code&gt;get&lt;/code&gt; to avoid clashes with the &lt;code&gt;base::get()&lt;/code&gt; function.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;setting-list-elements&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Setting List Elements&lt;/h1&gt;
+&lt;p&gt;Similarly we can create a &lt;code&gt;set()&lt;/code&gt; function to assign values to elements of our list using &lt;code&gt;.Primitive(&#34;[[&amp;lt;-&#34;)&lt;/code&gt;. Let’s add a fourth element to our list.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;set &amp;lt;- .Primitive(&amp;quot;[[&amp;lt;-&amp;quot;)
+z1 &amp;lt;- z1 %&amp;gt;% set(&amp;quot;d&amp;quot;, 4.6692)
+z1
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 2.718
+# 
+# $c
+# [1] 0.57721
+# 
+# $d
+# [1] 4.6692&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And now just as &lt;code&gt;set()&lt;/code&gt; giveth, &lt;code&gt;set()&lt;/code&gt; taketh away.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;z1 &amp;lt;- z1 %&amp;gt;% set(&amp;quot;d&amp;quot;, NULL)
+z1
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 2.718
+# 
+# $c
+# [1] 0.57721&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Of course as this is a list, we can set any kind of data.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;z1 %&amp;gt;% set(&amp;quot;data&amp;quot;, data.frame(a = c(1, 2, 2, 4), b = c(2, 3, 7, 4)))
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 2.718
+# 
+# $c
+# [1] 0.57721
+# 
+# $data
+#   a b
+# 1 1 2
+# 2 2 3
+# 3 2 7
+# 4 4 4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Or even overwrite elements.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;z1 %&amp;gt;% set(&amp;quot;b&amp;quot;, 4.6692)
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 4.6692
+# 
+# $c
+# [1] 0.57721&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;This was just a short blog post to highlight the power of &lt;code&gt;magrittr&lt;/code&gt; in combination with R primitives. We also saw how to rewrite and manipulate syntactic forms of internal R functions. What other interesting use cases have you found for the &lt;code&gt;magrittr&lt;/code&gt; pipe?&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>Selecting the max value from each group, a case study: dplyr and sparklyr</title>

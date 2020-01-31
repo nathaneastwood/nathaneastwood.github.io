@@ -6,8 +6,8 @@
 <meta name="generator" content="Hugo 0.56.3" />
 
 
-<title>Categories - Random R Ramblings</title>
-<meta property="og:title" content="Categories - Random R Ramblings">
+<title>Get and Set List Elements with magrittr - Random R Ramblings</title>
+<meta property="og:title" content="Get and Set List Elements with magrittr - Random R Ramblings">
 
 
 
@@ -18,7 +18,10 @@
 
 
 
-<link href="/categories/index.xml" rel="alternate" type="application/rss+xml" title="Random R Ramblings" />
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
 
 
 
@@ -65,22 +68,166 @@
 
 <main class="content" role="main">
 
+  <article class="article">
+    
+    <span class="article-duration">4 min read</span>
+    
+
+    <h1 class="article-title">Get and Set List Elements with magrittr</h1>
+
+    
+    <span class="article-date">2020-02-01</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Did you know that the <code>magrittr</code> pipe, <code>%&gt;%</code>, can be used for more than just <code>data.frame</code>s and <code>tibble</code>s? In this blog post, we look at how we can create get and set functions for list elements.</p>
+</div>
+<div id="getting-list-elements" class="section level1">
+<h1>Getting List Elements</h1>
+<p>First, let’s create a simple list.</p>
+<pre class="r"><code>z1 &lt;- list(a = pi, b = 2.718, c = 0.57721)
+z1
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 2.718
+# 
+# $c
+# [1] 0.57721</code></pre>
+<p>Let’s say we want to access an element of this list, typically we would use the <code>[[</code> function to do so.</p>
+<pre class="r"><code>z1[[2]]
+# [1] 2.718</code></pre>
+<p>But let’s say we need to access this list as part of a chain using <code>magrittr</code>’s pipe operator, <code>%&gt;%</code>. How can we do that? Well we can pipe our list into a <code>.</code> which acts as a placeholder for the list, on which we can perform our subset.</p>
+<pre class="r"><code>library(magrittr)
+z1 %&gt;% .[[2]]
+# [1] 2.718</code></pre>
+<p>Another solution is to call <code>[[</code> using its syntactic form <code>[[()</code> using backticks (or quotes, see <code>?Quotes</code>).</p>
+<pre class="r"><code>z1 %&gt;% `[[`(2)
+# [1] 2.718</code></pre>
+<p>Admittedly, these two solutions don’t look very nice. So what we can do instead is assign the <code>[[</code> function to an object which will, in effect, be a callable wrapper function.</p>
+<pre class="r"><code>get &lt;- .Primitive(&quot;[[&quot;) # Equivalent to get &lt;- `[[`
+get(z1, 2)
+# [1] 2.718</code></pre>
+<p>Primitives are functions that are internally implemented by R and so <code>.Primitive("[[")</code> tells R to dispatch to the underlying C code, which will be able to correctly identify which <code>[[</code> method to use on the list class (see <code>?.Primitive</code> for more details).</p>
+<p>Since our list is now the first argument of <code>get()</code>, we have a much “cleaner” looking way of accessing elements of a list with the <code>magrittr</code> pipe operator than <code>[[</code>. And so, let’s access the second element of our list using <code>get()</code> and the <code>magrittr</code> pipe.</p>
+<pre class="r"><code>z1 %&gt;% get(2)
+# [1] 2.718</code></pre>
+<p>We can also access the list using its names, too.</p>
+<pre class="r"><code>z1 %&gt;% get(&quot;b&quot;)
+# [1] 2.718</code></pre>
+<p>It even works with recursive indexing!</p>
+<pre class="r"><code>z2 &lt;- list(a = list(b = 9, c = &quot;hello&quot;), d = 1:5)
+z2
+# $a
+# $a$b
+# [1] 9
+# 
+# $a$c
+# [1] &quot;hello&quot;
+# 
+# 
+# $d
+# [1] 1 2 3 4 5
+z2 %&gt;% get(c(&quot;a&quot;, &quot;c&quot;)) # equivalent to z %&gt;% get(c(1, 2))
+# [1] &quot;hello&quot;</code></pre>
+<p>Note, you may want to choose a better name than <code>get</code> to avoid clashes with the <code>base::get()</code> function.</p>
+</div>
+<div id="setting-list-elements" class="section level1">
+<h1>Setting List Elements</h1>
+<p>Similarly we can create a <code>set()</code> function to assign values to elements of our list using <code>.Primitive("[[&lt;-")</code>. Let’s add a fourth element to our list.</p>
+<pre class="r"><code>set &lt;- .Primitive(&quot;[[&lt;-&quot;)
+z1 &lt;- z1 %&gt;% set(&quot;d&quot;, 4.6692)
+z1
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 2.718
+# 
+# $c
+# [1] 0.57721
+# 
+# $d
+# [1] 4.6692</code></pre>
+<p>And now just as <code>set()</code> giveth, <code>set()</code> taketh away.</p>
+<pre class="r"><code>z1 &lt;- z1 %&gt;% set(&quot;d&quot;, NULL)
+z1
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 2.718
+# 
+# $c
+# [1] 0.57721</code></pre>
+<p>Of course as this is a list, we can set any kind of data.</p>
+<pre class="r"><code>z1 %&gt;% set(&quot;data&quot;, data.frame(a = c(1, 2, 2, 4), b = c(2, 3, 7, 4)))
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 2.718
+# 
+# $c
+# [1] 0.57721
+# 
+# $data
+#   a b
+# 1 1 2
+# 2 2 3
+# 3 2 7
+# 4 4 4</code></pre>
+<p>Or even overwrite elements.</p>
+<pre class="r"><code>z1 %&gt;% set(&quot;b&quot;, 4.6692)
+# $a
+# [1] 3.141593
+# 
+# $b
+# [1] 4.6692
+# 
+# $c
+# [1] 0.57721</code></pre>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>This was just a short blog post to highlight the power of <code>magrittr</code> in combination with R primitives. We also saw how to rewrite and manipulate syntactic forms of internal R functions. What other interesting use cases have you found for the <code>magrittr</code> pipe?</p>
+</div>
+
+    </div>
+  </article>
+
   
-  <div class="archive">
-    
-    
-    
-    <h2 class="archive-title">2020</h2>
-    
-    <article class="archive-item">
-      <a href="/categories/r/" class="archive-item-link">R</a>
-      <span class="archive-item-date">
-        2020-02-01
-      </span>
-    </article>
-    
-    
-  </div>
+
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
 
 </main>
 
@@ -97,7 +244,22 @@
     </div>
     
 
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
     
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
 
     
 <script type="application/javascript">

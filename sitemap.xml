@@ -4,37 +4,60 @@
   
   <url>
     <loc>/categories/</loc>
-    <lastmod>2019-09-22T20:13:14-05:00</lastmod>
+    <lastmod>2020-02-01T20:00:16-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
+    <loc>/2020/02/01/get-and-set-list-elements-with-magrittr/</loc>
+    <lastmod>2020-02-01T20:00:16-05:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/post/</loc>
-    <lastmod>2019-09-22T20:13:14-05:00</lastmod>
+    <lastmod>2020-02-01T20:00:16-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/r/</loc>
-    <lastmod>2019-09-22T20:13:14-05:00</lastmod>
+    <lastmod>2020-02-01T20:00:16-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2019-09-22T20:13:14-05:00</lastmod>
+    <lastmod>2020-02-01T20:00:16-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/</loc>
+    <lastmod>2020-02-01T20:00:16-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/base/</loc>
+    <lastmod>2020-02-01T20:00:16-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/magrittr/</loc>
+    <lastmod>2020-02-01T20:00:16-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/rstats/</loc>
+    <lastmod>2020-02-01T20:00:16-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/2019/09/22/selecting-the-max-value-from-each-group-a-case-study-dplyr-and-sparklyr/</loc>
     <lastmod>2019-09-22T20:13:14-05:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/</loc>
-    <lastmod>2019-09-22T20:13:14-05:00</lastmod>
-    <priority>0</priority>
   </url>
   
   <url>
@@ -45,12 +68,6 @@
   
   <url>
     <loc>/tags/dplyr/</loc>
-    <lastmod>2019-09-22T20:13:14-05:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/rstats/</loc>
     <lastmod>2019-09-22T20:13:14-05:00</lastmod>
     <priority>0</priority>
   </url>
@@ -163,12 +180,6 @@
   <url>
     <loc>/2016/11/21/piping-within-pipes/</loc>
     <lastmod>2016-11-21T21:13:14-05:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/magrittr/</loc>
-    <lastmod>2016-11-21T21:13:14-05:00</lastmod>
-    <priority>0</priority>
   </url>
   
   <url>
