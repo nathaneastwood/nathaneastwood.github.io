@@ -5,10 +5,92 @@
     <description>Recent content on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Sat, 01 Feb 2020 20:00:16 -0500</lastBuildDate>
+    <lastBuildDate>Sat, 01 Feb 2020 20:13:14 -0500</lastBuildDate>
     
         <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Primitive Functions List</title>
+      <link>/2020/02/01/primitive-functions-list/</link>
+      <pubDate>Sat, 01 Feb 2020 20:13:14 -0500</pubDate>
+      
+      <guid>/2020/02/01/primitive-functions-list/</guid>
+      <description>
+
+
+&lt;p&gt;Ever wondered which R functions are actually passed to internal C code? Well, wonder no more as it turns out there is an unexported named list within the &lt;code&gt;methods&lt;/code&gt; package providing instructions for turning builtin and special functions into generic functions. Wrapping this list with &lt;code&gt;names()&lt;/code&gt; gives us the list of all R functions which wrap calls to &lt;code&gt;.Primitive()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;names(methods:::.BasicFunsList)
+#   [1] &amp;quot;$&amp;quot;                    &amp;quot;$&amp;lt;-&amp;quot;                  &amp;quot;[&amp;quot;                   
+#   [4] &amp;quot;[&amp;lt;-&amp;quot;                  &amp;quot;[[&amp;quot;                   &amp;quot;[[&amp;lt;-&amp;quot;                
+#   [7] &amp;quot;%*%&amp;quot;                  &amp;quot;xtfrm&amp;quot;                &amp;quot;c&amp;quot;                   
+#  [10] &amp;quot;all&amp;quot;                  &amp;quot;any&amp;quot;                  &amp;quot;sum&amp;quot;                 
+#  [13] &amp;quot;prod&amp;quot;                 &amp;quot;max&amp;quot;                  &amp;quot;min&amp;quot;                 
+#  [16] &amp;quot;range&amp;quot;                &amp;quot;is.matrix&amp;quot;            &amp;quot;&amp;gt;=&amp;quot;                  
+#  [19] &amp;quot;cosh&amp;quot;                 &amp;quot;cummax&amp;quot;               &amp;quot;dimnames&amp;lt;-&amp;quot;          
+#  [22] &amp;quot;as.raw&amp;quot;               &amp;quot;log2&amp;quot;                 &amp;quot;tan&amp;quot;                 
+#  [25] &amp;quot;dim&amp;quot;                  &amp;quot;as.logical&amp;quot;           &amp;quot;^&amp;quot;                   
+#  [28] &amp;quot;is.finite&amp;quot;            &amp;quot;sinh&amp;quot;                 &amp;quot;log10&amp;quot;               
+#  [31] &amp;quot;as.numeric&amp;quot;           &amp;quot;dim&amp;lt;-&amp;quot;                &amp;quot;is.array&amp;quot;            
+#  [34] &amp;quot;tanpi&amp;quot;                &amp;quot;gamma&amp;quot;                &amp;quot;atan&amp;quot;                
+#  [37] &amp;quot;as.integer&amp;quot;           &amp;quot;Arg&amp;quot;                  &amp;quot;signif&amp;quot;              
+#  [40] &amp;quot;cumprod&amp;quot;              &amp;quot;cos&amp;quot;                  &amp;quot;length&amp;quot;              
+#  [43] &amp;quot;!=&amp;quot;                   &amp;quot;digamma&amp;quot;              &amp;quot;exp&amp;quot;                 
+#  [46] &amp;quot;floor&amp;quot;                &amp;quot;acos&amp;quot;                 &amp;quot;seq.int&amp;quot;             
+#  [49] &amp;quot;abs&amp;quot;                  &amp;quot;length&amp;lt;-&amp;quot;             &amp;quot;sqrt&amp;quot;                
+#  [52] &amp;quot;!&amp;quot;                    &amp;quot;acosh&amp;quot;                &amp;quot;is.nan&amp;quot;              
+#  [55] &amp;quot;Re&amp;quot;                   &amp;quot;tanh&amp;quot;                 &amp;quot;names&amp;quot;               
+#  [58] &amp;quot;cospi&amp;quot;                &amp;quot;&amp;amp;&amp;quot;                    &amp;quot;anyNA&amp;quot;               
+#  [61] &amp;quot;trunc&amp;quot;                &amp;quot;cummin&amp;quot;               &amp;quot;levels&amp;lt;-&amp;quot;            
+#  [64] &amp;quot;*&amp;quot;                    &amp;quot;Mod&amp;quot;                  &amp;quot;|&amp;quot;                   
+#  [67] &amp;quot;names&amp;lt;-&amp;quot;              &amp;quot;+&amp;quot;                    &amp;quot;log&amp;quot;                 
+#  [70] &amp;quot;lgamma&amp;quot;               &amp;quot;as.complex&amp;quot;           &amp;quot;asinh&amp;quot;               
+#  [73] &amp;quot;-&amp;quot;                    &amp;quot;sin&amp;quot;                  &amp;quot;/&amp;quot;                   
+#  [76] &amp;quot;as.environment&amp;quot;       &amp;quot;&amp;lt;=&amp;quot;                   &amp;quot;as.double&amp;quot;           
+#  [79] &amp;quot;is.infinite&amp;quot;          &amp;quot;is.numeric&amp;quot;           &amp;quot;rep&amp;quot;                 
+#  [82] &amp;quot;round&amp;quot;                &amp;quot;sinpi&amp;quot;                &amp;quot;dimnames&amp;quot;            
+#  [85] &amp;quot;asin&amp;quot;                 &amp;quot;as.character&amp;quot;         &amp;quot;%/%&amp;quot;                 
+#  [88] &amp;quot;is.na&amp;quot;                &amp;quot;&amp;lt;&amp;quot;                    &amp;quot;&amp;gt;&amp;quot;                   
+#  [91] &amp;quot;Im&amp;quot;                   &amp;quot;%%&amp;quot;                   &amp;quot;trigamma&amp;quot;            
+#  [94] &amp;quot;==&amp;quot;                   &amp;quot;cumsum&amp;quot;               &amp;quot;atanh&amp;quot;               
+#  [97] &amp;quot;sign&amp;quot;                 &amp;quot;ceiling&amp;quot;              &amp;quot;Conj&amp;quot;                
+# [100] &amp;quot;as.call&amp;quot;              &amp;quot;log1p&amp;quot;                &amp;quot;expm1&amp;quot;               
+# [103] &amp;quot;(&amp;quot;                    &amp;quot;:&amp;quot;                    &amp;quot;=&amp;quot;                   
+# [106] &amp;quot;@&amp;quot;                    &amp;quot;{&amp;quot;                    &amp;quot;~&amp;quot;                   
+# [109] &amp;quot;&amp;amp;&amp;amp;&amp;quot;                   &amp;quot;.C&amp;quot;                   &amp;quot;baseenv&amp;quot;             
+# [112] &amp;quot;quote&amp;quot;                &amp;quot;&amp;lt;-&amp;quot;                   &amp;quot;is.name&amp;quot;             
+# [115] &amp;quot;if&amp;quot;                   &amp;quot;||&amp;quot;                   &amp;quot;attr&amp;lt;-&amp;quot;              
+# [118] &amp;quot;untracemem&amp;quot;           &amp;quot;.cache_class&amp;quot;         &amp;quot;substitute&amp;quot;          
+# [121] &amp;quot;interactive&amp;quot;          &amp;quot;is.call&amp;quot;              &amp;quot;switch&amp;quot;              
+# [124] &amp;quot;function&amp;quot;             &amp;quot;is.single&amp;quot;            &amp;quot;is.null&amp;quot;             
+# [127] &amp;quot;is.language&amp;quot;          &amp;quot;is.pairlist&amp;quot;          &amp;quot;.External.graphics&amp;quot;  
+# [130] &amp;quot;globalenv&amp;quot;            &amp;quot;class&amp;lt;-&amp;quot;              &amp;quot;.Primitive&amp;quot;          
+# [133] &amp;quot;is.logical&amp;quot;           &amp;quot;enc2utf8&amp;quot;             &amp;quot;UseMethod&amp;quot;           
+# [136] &amp;quot;.subset&amp;quot;              &amp;quot;proc.time&amp;quot;            &amp;quot;enc2native&amp;quot;          
+# [139] &amp;quot;repeat&amp;quot;               &amp;quot;&amp;lt;&amp;lt;-&amp;quot;                  &amp;quot;@&amp;lt;-&amp;quot;                 
+# [142] &amp;quot;missing&amp;quot;              &amp;quot;nargs&amp;quot;                &amp;quot;isS4&amp;quot;                
+# [145] &amp;quot;.isMethodsDispatchOn&amp;quot; &amp;quot;forceAndCall&amp;quot;         &amp;quot;.primTrace&amp;quot;          
+# [148] &amp;quot;storage.mode&amp;lt;-&amp;quot;       &amp;quot;.Call&amp;quot;                &amp;quot;unclass&amp;quot;             
+# [151] &amp;quot;gc.time&amp;quot;              &amp;quot;.subset2&amp;quot;             &amp;quot;environment&amp;lt;-&amp;quot;       
+# [154] &amp;quot;emptyenv&amp;quot;             &amp;quot;seq_len&amp;quot;              &amp;quot;.External2&amp;quot;          
+# [157] &amp;quot;is.symbol&amp;quot;            &amp;quot;class&amp;quot;                &amp;quot;on.exit&amp;quot;             
+# [160] &amp;quot;is.raw&amp;quot;               &amp;quot;for&amp;quot;                  &amp;quot;is.complex&amp;quot;          
+# [163] &amp;quot;list&amp;quot;                 &amp;quot;invisible&amp;quot;            &amp;quot;is.character&amp;quot;        
+# [166] &amp;quot;oldClass&amp;lt;-&amp;quot;           &amp;quot;is.environment&amp;quot;       &amp;quot;attributes&amp;quot;          
+# [169] &amp;quot;break&amp;quot;                &amp;quot;return&amp;quot;               &amp;quot;attr&amp;quot;                
+# [172] &amp;quot;tracemem&amp;quot;             &amp;quot;next&amp;quot;                 &amp;quot;.Call.graphics&amp;quot;      
+# [175] &amp;quot;standardGeneric&amp;quot;      &amp;quot;is.atomic&amp;quot;            &amp;quot;retracemem&amp;quot;          
+# [178] &amp;quot;expression&amp;quot;           &amp;quot;is.expression&amp;quot;        &amp;quot;call&amp;quot;                
+# [181] &amp;quot;is.object&amp;quot;            &amp;quot;pos.to.env&amp;quot;           &amp;quot;attributes&amp;lt;-&amp;quot;        
+# [184] &amp;quot;.primUntrace&amp;quot;         &amp;quot;...length&amp;quot;            &amp;quot;.External&amp;quot;           
+# [187] &amp;quot;oldClass&amp;quot;             &amp;quot;.Internal&amp;quot;            &amp;quot;.Fortran&amp;quot;            
+# [190] &amp;quot;browser&amp;quot;              &amp;quot;is.double&amp;quot;            &amp;quot;while&amp;quot;               
+# [193] &amp;quot;nzchar&amp;quot;               &amp;quot;is.list&amp;quot;              &amp;quot;lazyLoadDBfetch&amp;quot;     
+# [196] &amp;quot;...elt&amp;quot;               &amp;quot;is.integer&amp;quot;           &amp;quot;is.function&amp;quot;         
+# [199] &amp;quot;is.recursive&amp;quot;         &amp;quot;seq_along&amp;quot;            &amp;quot;unlist&amp;quot;              
+# [202] &amp;quot;as.vector&amp;quot;            &amp;quot;lengths&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>Get and Set List Elements with magrittr</title>
