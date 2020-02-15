@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>Building a base dplyr with primitives - Random R Ramblings</title>
+<meta property="og:title" content="Building a base dplyr with primitives - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+      <li><a href="https://github.com/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://www.linkedin.com/in/nathaneastwood/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="currentColor" d="M290.7 311L95 269.7 86.8 309l195.7 41zm51-87L188.2 95.7l-25.5 30.8 153.5 128.3zm-31.2 39.7L129.2 179l-16.7 36.5L293.7 300zM262 32l-32 24 119.3 160.3 32-24zm20.5 328h-200v39.7h200zm39.7 80H42.7V320h-40v160h359.5V320h-40z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://twitter.com/nathaneastwood_"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="/about/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm95.8 32.6L272 480l-32-136 32-56h-96l32 56-32 136-47.8-191.4C56.9 292 0 350.3 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-72.1-56.9-130.4-128.2-133.8z"/></svg>
+</span></i></a></li>
+    
+  </ul>
+  
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">14 min read</span>
+    
+
+    <h1 class="article-title">Building a base dplyr with primitives</h1>
+
+    
+    <span class="article-date">2020-02-15</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In one of my <a href="https://nathaneastwood.github.io/2020/02/01/get-and-set-list-elements-with-magrittr/">latest posts</a>, I discussed the idea of turning base R’s get and set operators (<code>[</code>, <code>[[</code>, <code>[&lt;-</code>, <code>[[&lt;-</code>) into human readable and pipeable functions. It was kindly pointed out in the comments that the <code>get()</code> and <code>set()</code> functions I defined in that blog post are actually exported in the <code>magrittr</code> package as <code>magrittr::extract2()</code> (<code>[[</code>) and <code>magrittr::inset2()</code> (<code>[[&lt;-</code>). In fact, there are a whole host of “alias” functions exported by <code>magrittr</code>, see <code>?magrittr::extract2</code> for more. However if we are developing a package, we may not necessarily want to <code>Import: magrittr</code>, we may only want to <code>Suggest</code> it as a package that complements our package. This is especially true when the functions we will be importing are simple aliases of other functions that we can just as easily create ourselves. Now sure, a lot of people already have and use <code>magrittr</code>, in which case they can use it, but not everyone wants it or uses it, so we shouldn’t enforce that dependency on users.</p>
+<p>Take for example if we were to create a package that recreates <code>dplyr</code>’s main verbs, <code>select()</code>; <code>filter()</code>; <code>mutate()</code>; and <code>arrange()</code>, using base R only. Think of it as a “poor man’s” dplyr, of course I jest - <code>base</code> is awesome. Oftentimes the main complaint I hear about <code>dplyr</code> is the sheer number of dependencies it has and the installation times that come with that; not to mention APIs have changed a few times over the years. <code>base</code> on the other hand already comes pre-installed with R and the API is extremely stable. The reason people like <code>dplyr</code>, however, is because the API on offer is extremely flexible and easy to understand. This blog post will show how we can recreate these verbs using base R and aliases to R’s operator functions and use them in conjunction with <code>magrittr</code>.</p>
+<div id="select" class="section level2">
+<h2>Select</h2>
+<p><code>dplyr::select()</code> allows the user to subset the columns of a <code>data.frame</code> and always return a <code>data.frame</code>. Thus to recreate this function we will need the operator for subsetting columns of a <code>data.frame</code> which is <code>[</code>, or more specifically, <code>[.data.frame</code>. Let’s take a look at the arguments for this function.</p>
+<pre class="r"><code>args(`[.data.frame`)
+# function (x, i, j, drop = if (missing(i)) TRUE else length(cols) == 
+#     1) 
+# NULL</code></pre>
+<p>We see that it takes:</p>
+<ul>
+<li><code>x</code> - the <code>data.frame</code></li>
+<li><code>i</code> - the rows to subset</li>
+<li><code>j</code> - the columns to subset</li>
+<li><code>drop</code> - whether to return a vector if only one column is left</li>
+</ul>
+<p>We will define our wrapper for the <code>[</code> function in the same way that <code>magrittr</code> does.</p>
+<pre class="r"><code>extract &lt;- `[`</code></pre>
+<p>As this is an S3 generic, R will know to dispatch to <code>[.data.frame</code> when it is passed a <code>data.frame</code>. Hence, we can now define a <code>select()</code> function which is similar in functionality to that of <code>dplyr::select()</code>.</p>
+<pre class="r"><code>select &lt;- function(.data, ...) {
+  cols &lt;- vapply(substitute(...()), deparse, NA_character_)
+  extract(.data, , cols, drop = FALSE)
+}</code></pre>
+<p>This function uses a couple of tricks here, so I’ll break them down. To use non-standard evaluation in the same way that <code>dplyr</code> does, that is to pass non-quoted column names, we must deparse them. We loop over the columns passed via <code>...</code> using a <code>vapply()</code>. The <code>substitute(...())</code> gives us a list-like object of all the symbols we pass which we can loop over. Note that we tell R that we wish to subset all of the rows in the <code>i</code> position by leaving the argument blank. Using this function, we can now select a single column.</p>
+<pre class="r"><code>mtcars %&gt;% select(mpg)
+#                      mpg
+# Mazda RX4           21.0
+# Mazda RX4 Wag       21.0
+# Datsun 710          22.8
+# Hornet 4 Drive      21.4
+# Hornet Sportabout   18.7
+# Valiant             18.1
+# Duster 360          14.3
+# Merc 240D           24.4
+# Merc 230            22.8
+# ... 23 rows omitted</code></pre>
+<p>Or multiple columns by passing a vector.</p>
+<pre class="r"><code>mtcars %&gt;% select(mpg, cyl)
+#                      mpg cyl
+# Mazda RX4           21.0   6
+# Mazda RX4 Wag       21.0   6
+# Datsun 710          22.8   4
+# Hornet 4 Drive      21.4   6
+# Hornet Sportabout   18.7   8
+# Valiant             18.1   6
+# Duster 360          14.3   8
+# Merc 240D           24.4   4
+# Merc 230            22.8   4
+# ... 23 rows omitted</code></pre>
+<p>And of course, this function works without <code>magrittr</code>.</p>
+<pre class="r"><code>select(mtcars, mpg, cyl)
+#                      mpg cyl
+# Mazda RX4           21.0   6
+# Mazda RX4 Wag       21.0   6
+# Datsun 710          22.8   4
+# Hornet 4 Drive      21.4   6
+# Hornet Sportabout   18.7   8
+# Valiant             18.1   6
+# Duster 360          14.3   8
+# Merc 240D           24.4   4
+# Merc 230            22.8   4
+# ... 23 rows omitted</code></pre>
+<p>For bonus points, we can write an equivalent of <code>dplyr::pull()</code> by removing the <code>drop = FALSE</code> argument and removing the <code>cols</code> parameter since we are only dealing with one column.</p>
+<pre class="r"><code>pull &lt;- function(.data, var) {
+  var &lt;- deparse(substitute(var))
+  stopifnot(length(var) == 1)
+  extract(.data, , var)
+}
+mtcars %&gt;% pull(mpg)
+#  [1] 21.0 21.0 22.8 21.4 18.7 18.1 14.3 24.4 22.8 19.2 17.8 16.4 17.3 15.2 10.4 10.4 14.7
+# [18] 32.4 30.4 33.9 21.5 15.5 15.2 13.3 19.2 27.3 26.0 30.4 15.8 19.7 15.0 21.4</code></pre>
+</div>
+<div id="filter" class="section level2">
+<h2>Filter</h2>
+<p>As we saw in the previous section, <code>[.data.frame</code> takes <code>i</code> as an argument which represents the rows to filter. Thus we can use a similar method to that used for <code>select()</code> only in this case, we must build the expressions by which to filter and separate them with an ampersand from which we can parse and evaluate.</p>
+<pre class="r"><code>filter &lt;- function(.data, ...) {
+  conditions &lt;- paste(vapply(substitute(...()), deparse, NA_character_), collapse = &quot; &amp; &quot;)
+  extract(.data, with(.data, eval(parse(text = conditions))), )
+}
+mtcars %&gt;% filter(cyl == 4)
+#                 mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Datsun 710     22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1
+# Merc 240D      24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2
+# Merc 230       22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2
+# Fiat 128       32.4   4  78.7  66 4.08 2.200 19.47  1  1    4    1
+# Honda Civic    30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2
+# Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# Toyota Corona  21.5   4 120.1  97 3.70 2.465 20.01  1  0    3    1
+# Fiat X1-9      27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1
+# Porsche 914-2  26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2
+# ... 2 rows omitted
+mtcars %&gt;% filter(cyl &lt;= 5 &amp; am &gt; 0)
+#                 mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Datsun 710     22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1
+# Fiat 128       32.4   4  78.7  66 4.08 2.200 19.47  1  1    4    1
+# Honda Civic    30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2
+# Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# Fiat X1-9      27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1
+# Porsche 914-2  26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2
+# Lotus Europa   30.4   4  95.1 113 3.77 1.513 16.90  1  1    5    2
+# Volvo 142E     21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2
+mtcars %&gt;% filter(cyl == 4 | cyl == 8)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2
+# Merc 450SE          16.4   8 275.8 180 3.07 4.070 17.40  0  0    3    3
+# Merc 450SL          17.3   8 275.8 180 3.07 3.730 17.60  0  0    3    3
+# Merc 450SLC         15.2   8 275.8 180 3.07 3.780 18.00  0  0    3    3
+# Cadillac Fleetwood  10.4   8 472.0 205 2.93 5.250 17.98  0  0    3    4
+# ... 16 rows omitted
+mtcars %&gt;% filter(!(cyl %in% c(4, 6)), am != 0)
+#                 mpg cyl disp  hp drat   wt qsec vs am gear carb
+# Ford Pantera L 15.8   8  351 264 4.22 3.17 14.5  0  1    5    4
+# Maserati Bora  15.0   8  301 335 3.54 3.57 14.6  0  1    5    8</code></pre>
+<p>We can also get a copy of <code>dplyr::slice()</code> really cheaply.</p>
+<pre class="r"><code>slice &lt;- function(.data, ...) {
+  stopifnot(is.numeric(...) || is.integer(...))
+  extract(.data, ...)
+}
+mtcars %&gt;% slice(1:3)
+#                      mpg cyl  disp
+# Mazda RX4           21.0   6 160.0
+# Mazda RX4 Wag       21.0   6 160.0
+# Datsun 710          22.8   4 108.0
+# Hornet 4 Drive      21.4   6 258.0
+# Hornet Sportabout   18.7   8 360.0
+# Valiant             18.1   6 225.0
+# Duster 360          14.3   8 360.0
+# Merc 240D           24.4   4 146.7
+# Merc 230            22.8   4 140.8
+# ... 23 rows omitted</code></pre>
+</div>
+<div id="arrange" class="section level2">
+<h2>Arrange</h2>
+<p>The final function using the <code>extract()</code> alias that I want to highlight is <code>arrange()</code>. I want to highlight this function because of the required trick with <code>eval.parent()</code> (note there are <a href="https://stackoverflow.com/a/58757430/3759418">other ways</a> we could achieve this).</p>
+<pre class="r"><code>arrange &lt;- function(.data, ...) {
+  rows &lt;- eval.parent(substitute(with(.data, order(...))))
+  extract(.data, rows, , drop = FALSE)
+}</code></pre>
+<p>We use <code>eval.parent()</code> instead of <code>eval()</code>, because the <a href="https://stackoverflow.com/a/53215820/300187"><code>eval()</code>/<code>substitute()</code> combo doesn’t play well with nested functions</a>. The <code>eval.parent()</code> trick has been <a href="https://stackoverflow.com/a/58239679/300187">proposed by @MoodyMudskipper</a> as a way to address this problem and allows us to seamlessly use <code>arrange()</code> inside other functions, including <code>magrittr</code> pipes:</p>
+<pre class="r"><code>mtcars %&gt;% arrange(mpg)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Cadillac Fleetwood  10.4   8 472.0 205 2.93 5.250 17.98  0  0    3    4
+# Lincoln Continental 10.4   8 460.0 215 3.00 5.424 17.82  0  0    3    4
+# Camaro Z28          13.3   8 350.0 245 3.73 3.840 15.41  0  0    3    4
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4
+# Chrysler Imperial   14.7   8 440.0 230 3.23 5.345 17.42  0  0    3    4
+# Maserati Bora       15.0   8 301.0 335 3.54 3.570 14.60  0  1    5    8
+# Merc 450SLC         15.2   8 275.8 180 3.07 3.780 18.00  0  0    3    3
+# AMC Javelin         15.2   8 304.0 150 3.15 3.435 17.30  0  0    3    2
+# Dodge Challenger    15.5   8 318.0 150 2.76 3.520 16.87  0  0    3    2
+# ... 23 rows omitted
+mtcars %&gt;% arrange(cyl, mpg)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Volvo 142E          21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2
+# Toyota Corona       21.5   4 120.1  97 3.70 2.465 20.01  1  0    3    1
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2
+# Porsche 914-2       26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2
+# Fiat X1-9           27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1
+# Honda Civic         30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2
+# Lotus Europa        30.4   4  95.1 113 3.77 1.513 16.90  1  1    5    2
+# ... 23 rows omitted</code></pre>
+<p>Thanks go to Artem Sokolov for <a href="https://stackoverflow.com/a/58757463/3759418">pointing this out</a>.</p>
+</div>
+<div id="mutate" class="section level2">
+<h2>Mutate</h2>
+<p>If we wish to create new columns in our dataset, particularly columns created using existing columns in the data, we must use the <code>[&lt;-</code> operator, specifically, <code>[&lt;-.data.frame</code>.</p>
+<pre class="r"><code>args(`[&lt;-.data.frame`)
+# function (x, i, j, value) 
+# NULL</code></pre>
+<p><code>[&lt;-.data.frame</code> takes the arguments:</p>
+<ul>
+<li><code>x</code> - the data</li>
+<li><code>i</code> - the rows to create</li>
+<li><code>j</code> - the columns to create</li>
+<li><code>value</code> - the value to give to the rows/columns</li>
+</ul>
+<p>We will assign this operator to <code>inset</code> - the same as <code>magrittr</code> does.</p>
+<pre class="r"><code>inset &lt;- `[&lt;-`</code></pre>
+<p>Here we <code>lapply()</code> over each of the conditions to return a list of vectored results of our expressions. We then use the <code>inset()</code> function to add these vectors as new columns to the <code>data.frame</code>.</p>
+<pre class="r"><code>mutate &lt;- function(.data, ...) {
+  conditions &lt;- vapply(substitute(...()), deparse, NA_character_)
+  new_data &lt;- lapply(
+    conditions,
+    function(x, .data) with(.data, eval(parse(text = x))),
+    .data
+  )
+  inset(.data, , names(conditions), new_data)
+}
+mtcars %&gt;% mutate(mpg2 = mpg * 2)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb mpg2
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4 42.0
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4 42.0
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1 45.6
+# Hornet 4 Drive      21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1 42.8
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2 37.4
+# Valiant             18.1   6 225.0 105 2.76 3.460 20.22  1  0    3    1 36.2
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4 28.6
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2 48.8
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2 45.6
+# ... 23 rows omitted
+mtcars %&gt;% mutate(mpg2 = mpg * 2, cyl2 = cyl * 2)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb mpg2 cyl2
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4 42.0   12
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4 42.0   12
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1 45.6    8
+# Hornet 4 Drive      21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1 42.8   12
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2 37.4   16
+# Valiant             18.1   6 225.0 105 2.76 3.460 20.22  1  0    3    1 36.2   12
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4 28.6   16
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2 48.8    8
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2 45.6    8
+# ... 23 rows omitted</code></pre>
+<p>Note that unlike <code>dplyr::mutate()</code>, we cannot create columns based on expressions we pass, for example, the following would not work.</p>
+<pre class="r"><code>mtcars %&gt;% mutate(mpg2 = mpg * 2, mpg3 = mpg2 * 3)
+# Error in eval(parse(text = x)): object &#39;mpg2&#39; not found</code></pre>
+<p>As a bonus, we can combine our <code>mutate()</code> function with <code>extract()</code> to create a copy of <code>dplyr::transmute()</code>.</p>
+<pre class="r"><code>transmute &lt;- function(.data, ...) {
+  conditions &lt;- vapply(substitute(...()), deparse, NA_character_)
+  mutated &lt;- mutate(.data, ...)
+  extract(mutated, names(conditions))
+}
+mtcars %&gt;% transmute(mpg2 = mpg * 2, cyl2 = cyl * 2)
+#                     mpg2 cyl2
+# Mazda RX4           42.0   12
+# Mazda RX4 Wag       42.0   12
+# Datsun 710          45.6    8
+# Hornet 4 Drive      42.8   12
+# Hornet Sportabout   37.4   16
+# Valiant             36.2   12
+# Duster 360          28.6   16
+# Merc 240D           48.8    8
+# Merc 230            45.6    8
+# ... 23 rows omitted</code></pre>
+</div>
+<div id="chaining" class="section level2">
+<h2>Chaining</h2>
+<p>As a final note, it should be clear that due to the nature of <code>magrittr</code>, your standard chaining of functions will still work.</p>
+<pre class="r"><code>mtcars %&gt;% 
+  filter(cyl == 4) %&gt;%
+  select(mpg, cyl, wt, disp)
+#                 mpg cyl    wt  disp
+# Datsun 710     22.8   4 2.320 108.0
+# Merc 240D      24.4   4 3.190 146.7
+# Merc 230       22.8   4 3.150 140.8
+# Fiat 128       32.4   4 2.200  78.7
+# Honda Civic    30.4   4 1.615  75.7
+# Toyota Corolla 33.9   4 1.835  71.1
+# Toyota Corona  21.5   4 2.465 120.1
+# Fiat X1-9      27.3   4 1.935  79.0
+# Porsche 914-2  26.0   4 2.140 120.3
+# ... 2 rows omitted</code></pre>
+</div>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>The idea behind this blog post was to highlight how we can use more human readable versions of R’s primitive operators to aid in pipeable data manipulation functions. Of course the solutions provided in this blog post are over-engineered and you would probably write them in a different way if you were seriously thinking about releasing them as a package. Also, whilst these functions are available via an import of <code>magrittr</code>, you may not wish to force the user to import <code>magrittr</code> and may wish to keep it as a suggestion instead. This reduces the number of dependencies on your package.</p>
+<p>For what it’s worth, I have included all of the above code in a package called <a href="https://github.com/nathaneastwood/poorman"><code>poorman</code></a> on my GitHub account. These functions haven’t been thoroughly tested and there may well be bugs. There are, however, much more detailed and dedicated recreations of <code>dplyr</code> using base R. If you are interested, check out: <a href="https://github.com/yonicd/bplyr"><code>bplyr</code></a> (note this package uses <code>rlang</code>) and <a href="https://github.com/mkearney/tbltools"><code>tbltools</code></a>.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+
+</main>
+
+      <footer class="footer">
+    
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"/></svg>
+</span></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

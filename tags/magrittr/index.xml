@@ -5,10 +5,288 @@
     <description>Recent content in magrittr on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Sat, 01 Feb 2020 20:00:16 -0500</lastBuildDate>
+    <lastBuildDate>Sat, 15 Feb 2020 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/tags/magrittr/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Building a base dplyr with primitives</title>
+      <link>/2020/02/15/building-a-base-dplyr-with-primitives/</link>
+      <pubDate>Sat, 15 Feb 2020 20:12:00 -0500</pubDate>
+      
+      <guid>/2020/02/15/building-a-base-dplyr-with-primitives/</guid>
+      <description>
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;In one of my &lt;a href=&#34;https://nathaneastwood.github.io/2020/02/01/get-and-set-list-elements-with-magrittr/&#34;&gt;latest posts&lt;/a&gt;, I discussed the idea of turning base R’s get and set operators (&lt;code&gt;[&lt;/code&gt;, &lt;code&gt;[[&lt;/code&gt;, &lt;code&gt;[&amp;lt;-&lt;/code&gt;, &lt;code&gt;[[&amp;lt;-&lt;/code&gt;) into human readable and pipeable functions. It was kindly pointed out in the comments that the &lt;code&gt;get()&lt;/code&gt; and &lt;code&gt;set()&lt;/code&gt; functions I defined in that blog post are actually exported in the &lt;code&gt;magrittr&lt;/code&gt; package as &lt;code&gt;magrittr::extract2()&lt;/code&gt; (&lt;code&gt;[[&lt;/code&gt;) and &lt;code&gt;magrittr::inset2()&lt;/code&gt; (&lt;code&gt;[[&amp;lt;-&lt;/code&gt;). In fact, there are a whole host of “alias” functions exported by &lt;code&gt;magrittr&lt;/code&gt;, see &lt;code&gt;?magrittr::extract2&lt;/code&gt; for more. However if we are developing a package, we may not necessarily want to &lt;code&gt;Import: magrittr&lt;/code&gt;, we may only want to &lt;code&gt;Suggest&lt;/code&gt; it as a package that complements our package. This is especially true when the functions we will be importing are simple aliases of other functions that we can just as easily create ourselves. Now sure, a lot of people already have and use &lt;code&gt;magrittr&lt;/code&gt;, in which case they can use it, but not everyone wants it or uses it, so we shouldn’t enforce that dependency on users.&lt;/p&gt;
+&lt;p&gt;Take for example if we were to create a package that recreates &lt;code&gt;dplyr&lt;/code&gt;’s main verbs, &lt;code&gt;select()&lt;/code&gt;; &lt;code&gt;filter()&lt;/code&gt;; &lt;code&gt;mutate()&lt;/code&gt;; and &lt;code&gt;arrange()&lt;/code&gt;, using base R only. Think of it as a “poor man’s” dplyr, of course I jest - &lt;code&gt;base&lt;/code&gt; is awesome. Oftentimes the main complaint I hear about &lt;code&gt;dplyr&lt;/code&gt; is the sheer number of dependencies it has and the installation times that come with that; not to mention APIs have changed a few times over the years. &lt;code&gt;base&lt;/code&gt; on the other hand already comes pre-installed with R and the API is extremely stable. The reason people like &lt;code&gt;dplyr&lt;/code&gt;, however, is because the API on offer is extremely flexible and easy to understand. This blog post will show how we can recreate these verbs using base R and aliases to R’s operator functions and use them in conjunction with &lt;code&gt;magrittr&lt;/code&gt;.&lt;/p&gt;
+&lt;div id=&#34;select&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Select&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;dplyr::select()&lt;/code&gt; allows the user to subset the columns of a &lt;code&gt;data.frame&lt;/code&gt; and always return a &lt;code&gt;data.frame&lt;/code&gt;. Thus to recreate this function we will need the operator for subsetting columns of a &lt;code&gt;data.frame&lt;/code&gt; which is &lt;code&gt;[&lt;/code&gt;, or more specifically, &lt;code&gt;[.data.frame&lt;/code&gt;. Let’s take a look at the arguments for this function.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;args(`[.data.frame`)
+# function (x, i, j, drop = if (missing(i)) TRUE else length(cols) == 
+#     1) 
+# NULL&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We see that it takes:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;x&lt;/code&gt; - the &lt;code&gt;data.frame&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;i&lt;/code&gt; - the rows to subset&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;j&lt;/code&gt; - the columns to subset&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;drop&lt;/code&gt; - whether to return a vector if only one column is left&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;We will define our wrapper for the &lt;code&gt;[&lt;/code&gt; function in the same way that &lt;code&gt;magrittr&lt;/code&gt; does.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;extract &amp;lt;- `[`&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As this is an S3 generic, R will know to dispatch to &lt;code&gt;[.data.frame&lt;/code&gt; when it is passed a &lt;code&gt;data.frame&lt;/code&gt;. Hence, we can now define a &lt;code&gt;select()&lt;/code&gt; function which is similar in functionality to that of &lt;code&gt;dplyr::select()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;select &amp;lt;- function(.data, ...) {
+  cols &amp;lt;- vapply(substitute(...()), deparse, NA_character_)
+  extract(.data, , cols, drop = FALSE)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This function uses a couple of tricks here, so I’ll break them down. To use non-standard evaluation in the same way that &lt;code&gt;dplyr&lt;/code&gt; does, that is to pass non-quoted column names, we must deparse them. We loop over the columns passed via &lt;code&gt;...&lt;/code&gt; using a &lt;code&gt;vapply()&lt;/code&gt;. The &lt;code&gt;substitute(...())&lt;/code&gt; gives us a list-like object of all the symbols we pass which we can loop over. Note that we tell R that we wish to subset all of the rows in the &lt;code&gt;i&lt;/code&gt; position by leaving the argument blank. Using this function, we can now select a single column.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% select(mpg)
+#                      mpg
+# Mazda RX4           21.0
+# Mazda RX4 Wag       21.0
+# Datsun 710          22.8
+# Hornet 4 Drive      21.4
+# Hornet Sportabout   18.7
+# Valiant             18.1
+# Duster 360          14.3
+# Merc 240D           24.4
+# Merc 230            22.8
+# ... 23 rows omitted&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Or multiple columns by passing a vector.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% select(mpg, cyl)
+#                      mpg cyl
+# Mazda RX4           21.0   6
+# Mazda RX4 Wag       21.0   6
+# Datsun 710          22.8   4
+# Hornet 4 Drive      21.4   6
+# Hornet Sportabout   18.7   8
+# Valiant             18.1   6
+# Duster 360          14.3   8
+# Merc 240D           24.4   4
+# Merc 230            22.8   4
+# ... 23 rows omitted&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And of course, this function works without &lt;code&gt;magrittr&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;select(mtcars, mpg, cyl)
+#                      mpg cyl
+# Mazda RX4           21.0   6
+# Mazda RX4 Wag       21.0   6
+# Datsun 710          22.8   4
+# Hornet 4 Drive      21.4   6
+# Hornet Sportabout   18.7   8
+# Valiant             18.1   6
+# Duster 360          14.3   8
+# Merc 240D           24.4   4
+# Merc 230            22.8   4
+# ... 23 rows omitted&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For bonus points, we can write an equivalent of &lt;code&gt;dplyr::pull()&lt;/code&gt; by removing the &lt;code&gt;drop = FALSE&lt;/code&gt; argument and removing the &lt;code&gt;cols&lt;/code&gt; parameter since we are only dealing with one column.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;pull &amp;lt;- function(.data, var) {
+  var &amp;lt;- deparse(substitute(var))
+  stopifnot(length(var) == 1)
+  extract(.data, , var)
+}
+mtcars %&amp;gt;% pull(mpg)
+#  [1] 21.0 21.0 22.8 21.4 18.7 18.1 14.3 24.4 22.8 19.2 17.8 16.4 17.3 15.2 10.4 10.4 14.7
+# [18] 32.4 30.4 33.9 21.5 15.5 15.2 13.3 19.2 27.3 26.0 30.4 15.8 19.7 15.0 21.4&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;filter&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Filter&lt;/h2&gt;
+&lt;p&gt;As we saw in the previous section, &lt;code&gt;[.data.frame&lt;/code&gt; takes &lt;code&gt;i&lt;/code&gt; as an argument which represents the rows to filter. Thus we can use a similar method to that used for &lt;code&gt;select()&lt;/code&gt; only in this case, we must build the expressions by which to filter and separate them with an ampersand from which we can parse and evaluate.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;filter &amp;lt;- function(.data, ...) {
+  conditions &amp;lt;- paste(vapply(substitute(...()), deparse, NA_character_), collapse = &amp;quot; &amp;amp; &amp;quot;)
+  extract(.data, with(.data, eval(parse(text = conditions))), )
+}
+mtcars %&amp;gt;% filter(cyl == 4)
+#                 mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Datsun 710     22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1
+# Merc 240D      24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2
+# Merc 230       22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2
+# Fiat 128       32.4   4  78.7  66 4.08 2.200 19.47  1  1    4    1
+# Honda Civic    30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2
+# Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# Toyota Corona  21.5   4 120.1  97 3.70 2.465 20.01  1  0    3    1
+# Fiat X1-9      27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1
+# Porsche 914-2  26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2
+# ... 2 rows omitted
+mtcars %&amp;gt;% filter(cyl &amp;lt;= 5 &amp;amp; am &amp;gt; 0)
+#                 mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Datsun 710     22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1
+# Fiat 128       32.4   4  78.7  66 4.08 2.200 19.47  1  1    4    1
+# Honda Civic    30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2
+# Toyota Corolla 33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# Fiat X1-9      27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1
+# Porsche 914-2  26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2
+# Lotus Europa   30.4   4  95.1 113 3.77 1.513 16.90  1  1    5    2
+# Volvo 142E     21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2
+mtcars %&amp;gt;% filter(cyl == 4 | cyl == 8)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2
+# Merc 450SE          16.4   8 275.8 180 3.07 4.070 17.40  0  0    3    3
+# Merc 450SL          17.3   8 275.8 180 3.07 3.730 17.60  0  0    3    3
+# Merc 450SLC         15.2   8 275.8 180 3.07 3.780 18.00  0  0    3    3
+# Cadillac Fleetwood  10.4   8 472.0 205 2.93 5.250 17.98  0  0    3    4
+# ... 16 rows omitted
+mtcars %&amp;gt;% filter(!(cyl %in% c(4, 6)), am != 0)
+#                 mpg cyl disp  hp drat   wt qsec vs am gear carb
+# Ford Pantera L 15.8   8  351 264 4.22 3.17 14.5  0  1    5    4
+# Maserati Bora  15.0   8  301 335 3.54 3.57 14.6  0  1    5    8&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We can also get a copy of &lt;code&gt;dplyr::slice()&lt;/code&gt; really cheaply.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;slice &amp;lt;- function(.data, ...) {
+  stopifnot(is.numeric(...) || is.integer(...))
+  extract(.data, ...)
+}
+mtcars %&amp;gt;% slice(1:3)
+#                      mpg cyl  disp
+# Mazda RX4           21.0   6 160.0
+# Mazda RX4 Wag       21.0   6 160.0
+# Datsun 710          22.8   4 108.0
+# Hornet 4 Drive      21.4   6 258.0
+# Hornet Sportabout   18.7   8 360.0
+# Valiant             18.1   6 225.0
+# Duster 360          14.3   8 360.0
+# Merc 240D           24.4   4 146.7
+# Merc 230            22.8   4 140.8
+# ... 23 rows omitted&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;arrange&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Arrange&lt;/h2&gt;
+&lt;p&gt;The final function using the &lt;code&gt;extract()&lt;/code&gt; alias that I want to highlight is &lt;code&gt;arrange()&lt;/code&gt;. I want to highlight this function because of the required trick with &lt;code&gt;eval.parent()&lt;/code&gt; (note there are &lt;a href=&#34;https://stackoverflow.com/a/58757430/3759418&#34;&gt;other ways&lt;/a&gt; we could achieve this).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;arrange &amp;lt;- function(.data, ...) {
+  rows &amp;lt;- eval.parent(substitute(with(.data, order(...))))
+  extract(.data, rows, , drop = FALSE)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We use &lt;code&gt;eval.parent()&lt;/code&gt; instead of &lt;code&gt;eval()&lt;/code&gt;, because the &lt;a href=&#34;https://stackoverflow.com/a/53215820/300187&#34;&gt;&lt;code&gt;eval()&lt;/code&gt;/&lt;code&gt;substitute()&lt;/code&gt; combo doesn’t play well with nested functions&lt;/a&gt;. The &lt;code&gt;eval.parent()&lt;/code&gt; trick has been &lt;a href=&#34;https://stackoverflow.com/a/58239679/300187&#34;&gt;proposed by @MoodyMudskipper&lt;/a&gt; as a way to address this problem and allows us to seamlessly use &lt;code&gt;arrange()&lt;/code&gt; inside other functions, including &lt;code&gt;magrittr&lt;/code&gt; pipes:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% arrange(mpg)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Cadillac Fleetwood  10.4   8 472.0 205 2.93 5.250 17.98  0  0    3    4
+# Lincoln Continental 10.4   8 460.0 215 3.00 5.424 17.82  0  0    3    4
+# Camaro Z28          13.3   8 350.0 245 3.73 3.840 15.41  0  0    3    4
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4
+# Chrysler Imperial   14.7   8 440.0 230 3.23 5.345 17.42  0  0    3    4
+# Maserati Bora       15.0   8 301.0 335 3.54 3.570 14.60  0  1    5    8
+# Merc 450SLC         15.2   8 275.8 180 3.07 3.780 18.00  0  0    3    3
+# AMC Javelin         15.2   8 304.0 150 3.15 3.435 17.30  0  0    3    2
+# Dodge Challenger    15.5   8 318.0 150 2.76 3.520 16.87  0  0    3    2
+# ... 23 rows omitted
+mtcars %&amp;gt;% arrange(cyl, mpg)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Volvo 142E          21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2
+# Toyota Corona       21.5   4 120.1  97 3.70 2.465 20.01  1  0    3    1
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2
+# Porsche 914-2       26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2
+# Fiat X1-9           27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1
+# Honda Civic         30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2
+# Lotus Europa        30.4   4  95.1 113 3.77 1.513 16.90  1  1    5    2
+# ... 23 rows omitted&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Thanks go to Artem Sokolov for &lt;a href=&#34;https://stackoverflow.com/a/58757463/3759418&#34;&gt;pointing this out&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;mutate&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Mutate&lt;/h2&gt;
+&lt;p&gt;If we wish to create new columns in our dataset, particularly columns created using existing columns in the data, we must use the &lt;code&gt;[&amp;lt;-&lt;/code&gt; operator, specifically, &lt;code&gt;[&amp;lt;-.data.frame&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;args(`[&amp;lt;-.data.frame`)
+# function (x, i, j, value) 
+# NULL&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;[&amp;lt;-.data.frame&lt;/code&gt; takes the arguments:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;x&lt;/code&gt; - the data&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;i&lt;/code&gt; - the rows to create&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;j&lt;/code&gt; - the columns to create&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;value&lt;/code&gt; - the value to give to the rows/columns&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;We will assign this operator to &lt;code&gt;inset&lt;/code&gt; - the same as &lt;code&gt;magrittr&lt;/code&gt; does.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;inset &amp;lt;- `[&amp;lt;-`&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here we &lt;code&gt;lapply()&lt;/code&gt; over each of the conditions to return a list of vectored results of our expressions. We then use the &lt;code&gt;inset()&lt;/code&gt; function to add these vectors as new columns to the &lt;code&gt;data.frame&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mutate &amp;lt;- function(.data, ...) {
+  conditions &amp;lt;- vapply(substitute(...()), deparse, NA_character_)
+  new_data &amp;lt;- lapply(
+    conditions,
+    function(x, .data) with(.data, eval(parse(text = x))),
+    .data
+  )
+  inset(.data, , names(conditions), new_data)
+}
+mtcars %&amp;gt;% mutate(mpg2 = mpg * 2)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb mpg2
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4 42.0
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4 42.0
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1 45.6
+# Hornet 4 Drive      21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1 42.8
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2 37.4
+# Valiant             18.1   6 225.0 105 2.76 3.460 20.22  1  0    3    1 36.2
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4 28.6
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2 48.8
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2 45.6
+# ... 23 rows omitted
+mtcars %&amp;gt;% mutate(mpg2 = mpg * 2, cyl2 = cyl * 2)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb mpg2 cyl2
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4 42.0   12
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4 42.0   12
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1 45.6    8
+# Hornet 4 Drive      21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1 42.8   12
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2 37.4   16
+# Valiant             18.1   6 225.0 105 2.76 3.460 20.22  1  0    3    1 36.2   12
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4 28.6   16
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2 48.8    8
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2 45.6    8
+# ... 23 rows omitted&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note that unlike &lt;code&gt;dplyr::mutate()&lt;/code&gt;, we cannot create columns based on expressions we pass, for example, the following would not work.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% mutate(mpg2 = mpg * 2, mpg3 = mpg2 * 3)
+# Error in eval(parse(text = x)): object &amp;#39;mpg2&amp;#39; not found&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As a bonus, we can combine our &lt;code&gt;mutate()&lt;/code&gt; function with &lt;code&gt;extract()&lt;/code&gt; to create a copy of &lt;code&gt;dplyr::transmute()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;transmute &amp;lt;- function(.data, ...) {
+  conditions &amp;lt;- vapply(substitute(...()), deparse, NA_character_)
+  mutated &amp;lt;- mutate(.data, ...)
+  extract(mutated, names(conditions))
+}
+mtcars %&amp;gt;% transmute(mpg2 = mpg * 2, cyl2 = cyl * 2)
+#                     mpg2 cyl2
+# Mazda RX4           42.0   12
+# Mazda RX4 Wag       42.0   12
+# Datsun 710          45.6    8
+# Hornet 4 Drive      42.8   12
+# Hornet Sportabout   37.4   16
+# Valiant             36.2   12
+# Duster 360          28.6   16
+# Merc 240D           48.8    8
+# Merc 230            45.6    8
+# ... 23 rows omitted&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;chaining&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Chaining&lt;/h2&gt;
+&lt;p&gt;As a final note, it should be clear that due to the nature of &lt;code&gt;magrittr&lt;/code&gt;, your standard chaining of functions will still work.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% 
+  filter(cyl == 4) %&amp;gt;%
+  select(mpg, cyl, wt, disp)
+#                 mpg cyl    wt  disp
+# Datsun 710     22.8   4 2.320 108.0
+# Merc 240D      24.4   4 3.190 146.7
+# Merc 230       22.8   4 3.150 140.8
+# Fiat 128       32.4   4 2.200  78.7
+# Honda Civic    30.4   4 1.615  75.7
+# Toyota Corolla 33.9   4 1.835  71.1
+# Toyota Corona  21.5   4 2.465 120.1
+# Fiat X1-9      27.3   4 1.935  79.0
+# Porsche 914-2  26.0   4 2.140 120.3
+# ... 2 rows omitted&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;The idea behind this blog post was to highlight how we can use more human readable versions of R’s primitive operators to aid in pipeable data manipulation functions. Of course the solutions provided in this blog post are over-engineered and you would probably write them in a different way if you were seriously thinking about releasing them as a package. Also, whilst these functions are available via an import of &lt;code&gt;magrittr&lt;/code&gt;, you may not wish to force the user to import &lt;code&gt;magrittr&lt;/code&gt; and may wish to keep it as a suggestion instead. This reduces the number of dependencies on your package.&lt;/p&gt;
+&lt;p&gt;For what it’s worth, I have included all of the above code in a package called &lt;a href=&#34;https://github.com/nathaneastwood/poorman&#34;&gt;&lt;code&gt;poorman&lt;/code&gt;&lt;/a&gt; on my GitHub account. These functions haven’t been thoroughly tested and there may well be bugs. There are, however, much more detailed and dedicated recreations of &lt;code&gt;dplyr&lt;/code&gt; using base R. If you are interested, check out: &lt;a href=&#34;https://github.com/yonicd/bplyr&#34;&gt;&lt;code&gt;bplyr&lt;/code&gt;&lt;/a&gt; (note this package uses &lt;code&gt;rlang&lt;/code&gt;) and &lt;a href=&#34;https://github.com/mkearney/tbltools&#34;&gt;&lt;code&gt;tbltools&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>Get and Set List Elements with magrittr</title>
