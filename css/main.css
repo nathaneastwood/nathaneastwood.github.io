@@ -336,3 +336,7 @@ table {
     box-shadow: none;
   }
 }
+
+data-twitter-event-id {
+    margin: 0 auto !important;
+}

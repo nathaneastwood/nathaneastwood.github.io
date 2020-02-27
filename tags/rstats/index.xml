@@ -5,10 +5,282 @@
     <description>Recent content in rstats on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Tue, 25 Feb 2020 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Thu, 27 Feb 2020 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/tags/rstats/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Building A base dplyr With Primitives: Grouped Operations, Pipes and More!</title>
+      <link>/2020/02/27/building-a-base-dplyr-with-primitives-grouped-operations-pipes-and-more/</link>
+      <pubDate>Thu, 27 Feb 2020 20:12:00 -0500</pubDate>
+      
+      <guid>/2020/02/27/building-a-base-dplyr-with-primitives-grouped-operations-pipes-and-more/</guid>
+      <description>
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;In my &lt;a href=&#34;https://nathaneastwood.github.io/2020/02/15/building-a-base-dplyr-with-primitives/&#34;&gt;last post&lt;/a&gt; we looked at how we can recreate &lt;code&gt;base&lt;/code&gt; equivalents of the &lt;code&gt;dplyr&lt;/code&gt; functions &lt;code&gt;select()&lt;/code&gt;, &lt;code&gt;filter()&lt;/code&gt;, &lt;code&gt;mutate()&lt;/code&gt; and &lt;code&gt;arrange()&lt;/code&gt;, amongst others. I wrote these functions and presented them in a new package called &lt;a href=&#34;https://github.com/nathaneastwood/poorman&#34;&gt;&lt;code&gt;poorman&lt;/code&gt;&lt;/a&gt;. In this post I will be discussing new functionality that I have since added to &lt;code&gt;poorman&lt;/code&gt; including grouped operations, renaming columns, summarising data and even &lt;code&gt;poorman&lt;/code&gt;’s very own pipe operator!&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;group-by&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Group By&lt;/h1&gt;
+&lt;div id=&#34;the-base-way&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;The &lt;code&gt;base&lt;/code&gt; Way&lt;/h2&gt;
+&lt;p&gt;Typically in the past when I have performed grouped operations using &lt;code&gt;base&lt;/code&gt; I have used the tried and tested split-apply-combine approach. That is, I split the &lt;code&gt;data.frame&lt;/code&gt; on a grouping variable, I apply a function and then I combine the parts back together. Let’s take a look at what I mean using the &lt;code&gt;mtcars&lt;/code&gt; dataset by splitting the data into groups representing each combination of transmission type and number of cylinders (see &lt;code&gt;?datasets::mtcars&lt;/code&gt; for more details about this dataset).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# Split the data into a list of data.frames - one for each group
+split &amp;lt;- split(mtcars, list(mtcars$am, mtcars$cyl))
+# Apply the mean function to each data.frame&amp;#39;s mpg column
+apply &amp;lt;- lapply(
+  split,
+  function(x) {
+    x[, &amp;quot;meanMpg&amp;quot;] &amp;lt;- mean(x$mpg)
+    x
+  }
+)
+# Stitch each of the lists back into one data.frame
+combine &amp;lt;- do.call(rbind, unname(apply))
+combine
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb  meanMpg
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2 22.90000
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2 22.90000
+# Toyota Corona       21.5   4 120.1  97 3.70 2.465 20.01  1  0    3    1 22.90000
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1 28.07500
+# Fiat 128            32.4   4  78.7  66 4.08 2.200 19.47  1  1    4    1 28.07500
+# Honda Civic         30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2 28.07500
+# Toyota Corolla      33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1 28.07500
+# Fiat X1-9           27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1 28.07500
+# Porsche 914-2       26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2 28.07500
+# Lotus Europa        30.4   4  95.1 113 3.77 1.513 16.90  1  1    5    2 28.07500
+# Volvo 142E          21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2 28.07500
+# Hornet 4 Drive      21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1 19.12500
+# Valiant             18.1   6 225.0 105 2.76 3.460 20.22  1  0    3    1 19.12500
+# Merc 280            19.2   6 167.6 123 3.92 3.440 18.30  1  0    4    4 19.12500
+# Merc 280C           17.8   6 167.6 123 3.92 3.440 18.90  1  0    4    4 19.12500
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4 20.56667
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4 20.56667
+# Ferrari Dino        19.7   6 145.0 175 3.62 2.770 15.50  0  1    5    6 20.56667
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2 15.05000
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4 15.05000
+# Merc 450SE          16.4   8 275.8 180 3.07 4.070 17.40  0  0    3    3 15.05000
+# Merc 450SL          17.3   8 275.8 180 3.07 3.730 17.60  0  0    3    3 15.05000
+# Merc 450SLC         15.2   8 275.8 180 3.07 3.780 18.00  0  0    3    3 15.05000
+# Cadillac Fleetwood  10.4   8 472.0 205 2.93 5.250 17.98  0  0    3    4 15.05000
+# Lincoln Continental 10.4   8 460.0 215 3.00 5.424 17.82  0  0    3    4 15.05000
+# Chrysler Imperial   14.7   8 440.0 230 3.23 5.345 17.42  0  0    3    4 15.05000
+# Dodge Challenger    15.5   8 318.0 150 2.76 3.520 16.87  0  0    3    2 15.05000
+# AMC Javelin         15.2   8 304.0 150 3.15 3.435 17.30  0  0    3    2 15.05000
+# Camaro Z28          13.3   8 350.0 245 3.73 3.840 15.41  0  0    3    4 15.05000
+# Pontiac Firebird    19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2 15.05000
+# Ford Pantera L      15.8   8 351.0 264 4.22 3.170 14.50  0  1    5    4 15.40000
+# Maserati Bora       15.0   8 301.0 335 3.54 3.570 14.60  0  1    5    8 15.40000&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note that here I &lt;code&gt;unname()&lt;/code&gt; the list of &lt;code&gt;data.frame&lt;/code&gt;s to avoid &lt;code&gt;rbind()&lt;/code&gt; prepending the row names with the group information. This is a really nice, flexible way to perform grouped operations using &lt;code&gt;base&lt;/code&gt;. There are in fact many other ways that this type of operation can be achieved; the flexibility of &lt;code&gt;base&lt;/code&gt; is what makes it so great.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-poorman-way&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;The &lt;code&gt;poorman&lt;/code&gt; Way&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;poorman&lt;/code&gt; aims to be a direct replacement for &lt;code&gt;dplyr&lt;/code&gt;, the idea being that loading &lt;code&gt;poorman&lt;/code&gt; and running your script written with &lt;code&gt;dplyr&lt;/code&gt; code should return the same results. Therefore if you’re familiar with the &lt;code&gt;dplyr&lt;/code&gt; API then the next piece of code should look very familiar.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(poorman)
+mtcars %&amp;gt;%
+  group_by(am, cyl) %&amp;gt;%
+  mutate(meanMpg = mean(mpg))
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb  meanMpg
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2 22.90000
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2 22.90000
+# Toyota Corona       21.5   4 120.1  97 3.70 2.465 20.01  1  0    3    1 22.90000
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1 28.07500
+# Fiat 128            32.4   4  78.7  66 4.08 2.200 19.47  1  1    4    1 28.07500
+# Honda Civic         30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2 28.07500
+# Toyota Corolla      33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1 28.07500
+# Fiat X1-9           27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1 28.07500
+# Porsche 914-2       26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2 28.07500
+# Lotus Europa        30.4   4  95.1 113 3.77 1.513 16.90  1  1    5    2 28.07500
+# Volvo 142E          21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2 28.07500
+# Hornet 4 Drive      21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1 19.12500
+# Valiant             18.1   6 225.0 105 2.76 3.460 20.22  1  0    3    1 19.12500
+# Merc 280            19.2   6 167.6 123 3.92 3.440 18.30  1  0    4    4 19.12500
+# Merc 280C           17.8   6 167.6 123 3.92 3.440 18.90  1  0    4    4 19.12500
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4 20.56667
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4 20.56667
+# Ferrari Dino        19.7   6 145.0 175 3.62 2.770 15.50  0  1    5    6 20.56667
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2 15.05000
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4 15.05000
+# Merc 450SE          16.4   8 275.8 180 3.07 4.070 17.40  0  0    3    3 15.05000
+# Merc 450SL          17.3   8 275.8 180 3.07 3.730 17.60  0  0    3    3 15.05000
+# Merc 450SLC         15.2   8 275.8 180 3.07 3.780 18.00  0  0    3    3 15.05000
+# Cadillac Fleetwood  10.4   8 472.0 205 2.93 5.250 17.98  0  0    3    4 15.05000
+# Lincoln Continental 10.4   8 460.0 215 3.00 5.424 17.82  0  0    3    4 15.05000
+# Chrysler Imperial   14.7   8 440.0 230 3.23 5.345 17.42  0  0    3    4 15.05000
+# Dodge Challenger    15.5   8 318.0 150 2.76 3.520 16.87  0  0    3    2 15.05000
+# AMC Javelin         15.2   8 304.0 150 3.15 3.435 17.30  0  0    3    2 15.05000
+# Camaro Z28          13.3   8 350.0 245 3.73 3.840 15.41  0  0    3    4 15.05000
+# Pontiac Firebird    19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2 15.05000
+# Ford Pantera L      15.8   8 351.0 264 4.22 3.170 14.50  0  1    5    4 15.40000
+# Maserati Bora       15.0   8 301.0 335 3.54 3.570 14.60  0  1    5    8 15.40000
+# 
+# Groups:  am, cyl&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In order to achieve this, I need to have a way to perform grouped operations for functions such as &lt;code&gt;mutate()&lt;/code&gt; and &lt;code&gt;filter()&lt;/code&gt;. The easiest solution I could think of therefore is an S3 class system. So the &lt;code&gt;group_by()&lt;/code&gt; function simply applies a &lt;code&gt;&#34;grouped_data&#34;&lt;/code&gt; class to the data and then the &lt;code&gt;mutate()&lt;/code&gt; S3 generic knows to dispatch to the &lt;code&gt;mutate.grouped_data()&lt;/code&gt; method. For more information on the S3 class system I recommend checking out &lt;a href=&#34;https://adv-r.hadley.nz/s3.html&#34;&gt;Advanced R&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;ungrouping&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Ungrouping&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;poorman&lt;/code&gt; also offers a replica of the &lt;code&gt;dplyr::ungroup()&lt;/code&gt; function. Let’s take a look.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;%
+  group_by(am, cyl) %&amp;gt;%
+  mutate(meanMpg = mean(mpg)) %&amp;gt;%
+  ungroup(am)
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb  meanMpg
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2 22.90000
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2 22.90000
+# Toyota Corona       21.5   4 120.1  97 3.70 2.465 20.01  1  0    3    1 22.90000
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1 28.07500
+# Fiat 128            32.4   4  78.7  66 4.08 2.200 19.47  1  1    4    1 28.07500
+# Honda Civic         30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2 28.07500
+# Toyota Corolla      33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1 28.07500
+# Fiat X1-9           27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1 28.07500
+# Porsche 914-2       26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2 28.07500
+# Lotus Europa        30.4   4  95.1 113 3.77 1.513 16.90  1  1    5    2 28.07500
+# Volvo 142E          21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2 28.07500
+# Hornet 4 Drive      21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1 19.12500
+# Valiant             18.1   6 225.0 105 2.76 3.460 20.22  1  0    3    1 19.12500
+# Merc 280            19.2   6 167.6 123 3.92 3.440 18.30  1  0    4    4 19.12500
+# Merc 280C           17.8   6 167.6 123 3.92 3.440 18.90  1  0    4    4 19.12500
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4 20.56667
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4 20.56667
+# Ferrari Dino        19.7   6 145.0 175 3.62 2.770 15.50  0  1    5    6 20.56667
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2 15.05000
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4 15.05000
+# Merc 450SE          16.4   8 275.8 180 3.07 4.070 17.40  0  0    3    3 15.05000
+# Merc 450SL          17.3   8 275.8 180 3.07 3.730 17.60  0  0    3    3 15.05000
+# Merc 450SLC         15.2   8 275.8 180 3.07 3.780 18.00  0  0    3    3 15.05000
+# Cadillac Fleetwood  10.4   8 472.0 205 2.93 5.250 17.98  0  0    3    4 15.05000
+# Lincoln Continental 10.4   8 460.0 215 3.00 5.424 17.82  0  0    3    4 15.05000
+# Chrysler Imperial   14.7   8 440.0 230 3.23 5.345 17.42  0  0    3    4 15.05000
+# Dodge Challenger    15.5   8 318.0 150 2.76 3.520 16.87  0  0    3    2 15.05000
+# AMC Javelin         15.2   8 304.0 150 3.15 3.435 17.30  0  0    3    2 15.05000
+# Camaro Z28          13.3   8 350.0 245 3.73 3.840 15.41  0  0    3    4 15.05000
+# Pontiac Firebird    19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2 15.05000
+# Ford Pantera L      15.8   8 351.0 264 4.22 3.170 14.50  0  1    5    4 15.40000
+# Maserati Bora       15.0   8 301.0 335 3.54 3.570 14.60  0  1    5    8 15.40000
+# 
+# Groups:  cyl&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We see here that the printing method tells us the remaining group: &lt;code&gt;cyl&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;additional-functionality&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Additional Functionality&lt;/h1&gt;
+&lt;div id=&#34;the-pipe&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;The Pipe&lt;/h2&gt;
+&lt;p&gt;You will have noticed that I am piping commands together in the above section, however I am not using the &lt;code&gt;magrittr&lt;/code&gt; pipe. I implemented my own version which is a very small piece of code. This means users no longer need to load &lt;code&gt;magrittr&lt;/code&gt; separately (previously &lt;code&gt;poorman&lt;/code&gt; only had &lt;code&gt;magrittr&lt;/code&gt; as a suggested package so as not to force the installation on users).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;`%&amp;gt;%` &amp;lt;- function(lhs, rhs) {
+  lhs &amp;lt;- substitute(lhs)
+  rhs &amp;lt;- substitute(rhs)
+  eval(as.call(c(rhs[[1L]], lhs, as.list(rhs[-1L]))), envir = parent.frame())
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;rename&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Rename&lt;/h2&gt;
+&lt;p&gt;I also managed to add &lt;code&gt;rename()&lt;/code&gt;. For this I took advantage of &lt;code&gt;colnames&amp;lt;-&lt;/code&gt; in combination with the &lt;code&gt;inset()&lt;/code&gt; function I defined in my last post (&lt;code&gt;[&amp;lt;-&lt;/code&gt;). I don’t want to make this post too heavy on the code so feel free to take a look at the &lt;a href=&#34;https://github.com/nathaneastwood/poorman/blob/master/R/rename.R&#34;&gt;code&lt;/a&gt; yourself to see how exactly I achieved this.&lt;/p&gt;
+&lt;p&gt;Now I am able to pass key-value pairs of unquoted column names to rename columns. See below for an example.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;%
+  rename(MPG = mpg, numCyls = cyl)
+#                      MPG numCyls  disp  hp drat    wt  qsec vs am gear carb
+# Mazda RX4           21.0       6 160.0 110 3.90 2.620 16.46  0  1    4    4
+# Mazda RX4 Wag       21.0       6 160.0 110 3.90 2.875 17.02  0  1    4    4
+# Datsun 710          22.8       4 108.0  93 3.85 2.320 18.61  1  1    4    1
+# Hornet 4 Drive      21.4       6 258.0 110 3.08 3.215 19.44  1  0    3    1
+# Hornet Sportabout   18.7       8 360.0 175 3.15 3.440 17.02  0  0    3    2
+# Valiant             18.1       6 225.0 105 2.76 3.460 20.22  1  0    3    1
+# Duster 360          14.3       8 360.0 245 3.21 3.570 15.84  0  0    3    4
+# Merc 240D           24.4       4 146.7  62 3.69 3.190 20.00  1  0    4    2
+# Merc 230            22.8       4 140.8  95 3.92 3.150 22.90  1  0    4    2
+# Merc 280            19.2       6 167.6 123 3.92 3.440 18.30  1  0    4    4
+# Merc 280C           17.8       6 167.6 123 3.92 3.440 18.90  1  0    4    4
+# Merc 450SE          16.4       8 275.8 180 3.07 4.070 17.40  0  0    3    3
+# Merc 450SL          17.3       8 275.8 180 3.07 3.730 17.60  0  0    3    3
+# Merc 450SLC         15.2       8 275.8 180 3.07 3.780 18.00  0  0    3    3
+# Cadillac Fleetwood  10.4       8 472.0 205 2.93 5.250 17.98  0  0    3    4
+# Lincoln Continental 10.4       8 460.0 215 3.00 5.424 17.82  0  0    3    4
+# Chrysler Imperial   14.7       8 440.0 230 3.23 5.345 17.42  0  0    3    4
+# Fiat 128            32.4       4  78.7  66 4.08 2.200 19.47  1  1    4    1
+# Honda Civic         30.4       4  75.7  52 4.93 1.615 18.52  1  1    4    2
+# Toyota Corolla      33.9       4  71.1  65 4.22 1.835 19.90  1  1    4    1
+# Toyota Corona       21.5       4 120.1  97 3.70 2.465 20.01  1  0    3    1
+# Dodge Challenger    15.5       8 318.0 150 2.76 3.520 16.87  0  0    3    2
+# AMC Javelin         15.2       8 304.0 150 3.15 3.435 17.30  0  0    3    2
+# Camaro Z28          13.3       8 350.0 245 3.73 3.840 15.41  0  0    3    4
+# Pontiac Firebird    19.2       8 400.0 175 3.08 3.845 17.05  0  0    3    2
+# Fiat X1-9           27.3       4  79.0  66 4.08 1.935 18.90  1  1    4    1
+# Porsche 914-2       26.0       4 120.3  91 4.43 2.140 16.70  0  1    5    2
+# Lotus Europa        30.4       4  95.1 113 3.77 1.513 16.90  1  1    5    2
+# Ford Pantera L      15.8       8 351.0 264 4.22 3.170 14.50  0  1    5    4
+# Ferrari Dino        19.7       6 145.0 175 3.62 2.770 15.50  0  1    5    6
+# Maserati Bora       15.0       8 301.0 335 3.54 3.570 14.60  0  1    5    8
+# Volvo 142E          21.4       4 121.0 109 4.11 2.780 18.60  1  1    4    2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Using this function, I was able to implement key-value &lt;code&gt;select()&lt;/code&gt; statements too!&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;%
+  select(MPG = mpg, numCyls = cyl, numGears = gear)
+#                      MPG numCyls numGears
+# Mazda RX4           21.0       6        4
+# Mazda RX4 Wag       21.0       6        4
+# Datsun 710          22.8       4        4
+# Hornet 4 Drive      21.4       6        3
+# Hornet Sportabout   18.7       8        3
+# Valiant             18.1       6        3
+# Duster 360          14.3       8        3
+# Merc 240D           24.4       4        4
+# Merc 230            22.8       4        4
+# Merc 280            19.2       6        4
+# Merc 280C           17.8       6        4
+# Merc 450SE          16.4       8        3
+# Merc 450SL          17.3       8        3
+# Merc 450SLC         15.2       8        3
+# Cadillac Fleetwood  10.4       8        3
+# Lincoln Continental 10.4       8        3
+# Chrysler Imperial   14.7       8        3
+# Fiat 128            32.4       4        4
+# Honda Civic         30.4       4        4
+# Toyota Corolla      33.9       4        4
+# Toyota Corona       21.5       4        3
+# Dodge Challenger    15.5       8        3
+# AMC Javelin         15.2       8        3
+# Camaro Z28          13.3       8        3
+# Pontiac Firebird    19.2       8        3
+# Fiat X1-9           27.3       4        4
+# Porsche 914-2       26.0       4        5
+# Lotus Europa        30.4       4        5
+# Ford Pantera L      15.8       8        5
+# Ferrari Dino        19.7       6        5
+# Maserati Bora       15.0       8        5
+# Volvo 142E          21.4       4        4&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;summary&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Summary&lt;/h2&gt;
+&lt;p&gt;Finally I have added a copy of the &lt;code&gt;summarise()&lt;/code&gt; function. This was probably the trickiest piece of code to write for the package and I am not completely satisfied with my solution although it works and is seemingly quite quick (on my 2016 MacBook Pro). If you’re interested in taking a look at the implementation and making suggestions then the code can be found &lt;a href=&#34;https://github.com/nathaneastwood/poorman/blob/master/R/summarise.R&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;%
+  group_by(am, cyl) %&amp;gt;%
+  summarise(meanMpg = mean(mpg), sumDisp = sum(disp))
+#   am cyl  meanMpg sumDisp
+# 1  0   4     22.9   407.6
+# 2  1   4   28.075   748.9
+# 3  0   6   19.125   818.2
+# 4  1   6 20.56667     465
+# 5  0   8    15.05  4291.4
+# 6  1   8     15.4     652&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Recently there was a very interesting Twitter discussion on this topic which led to an comprehensive list of examples for performing this operation in &lt;code&gt;base&lt;/code&gt;.&lt;/p&gt;
+&lt;blockquote class=&#34;twitter-tweet tw-align-center&#34;&gt;
+&lt;p lang=&#34;en&#34; dir=&#34;ltr&#34;&gt;
+How would you write this in base R?&lt;br&gt;&lt;br&gt;mtcars %&amp;gt;% &lt;br&gt; group_by(cyl) %&amp;gt;% &lt;br&gt; summarise(mean = mean(disp), n = n())&lt;br&gt;&lt;br&gt;I&#39;ve written up three approaches in &lt;a href=&#34;https://t.co/BBnXSDSf67&#34;&gt;https://t.co/BBnXSDSf67&lt;/a&gt;. Is there a better way? &lt;a href=&#34;https://twitter.com/hashtag/rstats?src=hash&amp;amp;ref_src=twsrc%5Etfw&#34;&gt;#rstats&lt;/a&gt;
+&lt;/p&gt;
+— Hadley Wickham (&lt;span class=&#34;citation&#34;&gt;@hadleywickham&lt;/span&gt;) &lt;a href=&#34;https://twitter.com/hadleywickham/status/1231252596712771585?ref_src=twsrc%5Etfw&#34;&gt;February 22, 2020&lt;/a&gt;
+&lt;/blockquote&gt;
+&lt;script async src=&#34;https://platform.twitter.com/widgets.js&#34; charset=&#34;utf-8&#34;&gt;&lt;/script&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;I believe that &lt;code&gt;poorman&lt;/code&gt; now offers the core of what &lt;code&gt;dplyr&lt;/code&gt; has to offer using only &lt;code&gt;base&lt;/code&gt;, therefore zero dependencies (not including development based dependencies such as &lt;code&gt;roxygen2&lt;/code&gt;). I now need to really start writing some serious tests which I will endeavour to do using &lt;a href=&#34;https://github.com/markvanderloo/tinytest&#34;&gt;&lt;code&gt;tinytest&lt;/code&gt;&lt;/a&gt; before adding any additional functionality. Without tests, any package is rather worthless in my opinion. If there is functionality you would like to see added to the package then please feel free to submit an issue or open a pull request.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>Including Function Factories in an R Package: Using Collate</title>
@@ -101,7 +373,7 @@ NULL&lt;/code&gt;&lt;/pre&gt;
     </item>
     
     <item>
-      <title>Building a base dplyr with primitives</title>
+      <title>Building A base dplyr With Primitives</title>
       <link>/2020/02/15/building-a-base-dplyr-with-primitives/</link>
       <pubDate>Sat, 15 Feb 2020 20:12:00 -0500</pubDate>
       
