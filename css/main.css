@@ -340,3 +340,7 @@ table {
 data-twitter-event-id {
     margin: 0 auto !important;
 }
+
+blockquote {
+  font-style: italic;
+}

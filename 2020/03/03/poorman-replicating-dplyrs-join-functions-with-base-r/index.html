@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>poorman: Replicating dplyr&#39;s Join Functions with base R - Random R Ramblings</title>
+<meta property="og:title" content="poorman: Replicating dplyr&#39;s Join Functions with base R - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+      <li><a href="https://github.com/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://www.linkedin.com/in/nathaneastwood/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="currentColor" d="M290.7 311L95 269.7 86.8 309l195.7 41zm51-87L188.2 95.7l-25.5 30.8 153.5 128.3zm-31.2 39.7L129.2 179l-16.7 36.5L293.7 300zM262 32l-32 24 119.3 160.3 32-24zm20.5 328h-200v39.7h200zm39.7 80H42.7V320h-40v160h359.5V320h-40z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://twitter.com/nathaneastwood_"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="/about/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm95.8 32.6L272 480l-32-136 32-56h-96l32 56-32 136-47.8-191.4C56.9 292 0 350.3 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-72.1-56.9-130.4-128.2-133.8z"/></svg>
+</span></i></a></li>
+    
+  </ul>
+  
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">4 min read</span>
+    
+
+    <h1 class="article-title">poorman: Replicating dplyr&#39;s Join Functions with base R</h1>
+
+    
+    <span class="article-date">2020-03-03</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In my <a href="https://nathaneastwood.github.io/2020/02/27/building-a-base-dplyr-with-primitives-grouped-operations-pipes-and-more/">last post</a> I discussed performing split-apply-combine operations on R <code>data.frame</code>s and how this functionality was used within <a href="https://github.com/nathaneastwood/poorman"><code>poorman</code></a> - a <code>base</code> R replica of <code>dplyr</code>. In this post I’d like to talk about replicating <code>dplyr</code>’s join and filter join functionality, again using nothing but <code>base</code>.</p>
+</div>
+<div id="joins" class="section level1">
+<h1>Joins</h1>
+<p>First of all, let’s set up some data to use for our examples. Here I create two <code>data.frame</code>s; one containing the names and heights associated with some IDs; the second containing names and weights also associated with some IDs.</p>
+<pre class="r"><code>table1 &lt;- data.frame(
+  id = c(1, 3, 5, 7, 9),
+  name = LETTERS[1:5],
+  height = c(1, 2, 2, 2, 2),
+  stringsAsFactors = FALSE
+)
+table1
+#   id name height
+# 1  1    A      1
+# 2  3    B      2
+# 3  5    C      2
+# 4  7    D      2
+# 5  9    E      2
+table2 &lt;- data.frame(
+  id = c(2, 4, 5, 7),
+  name = LETTERS[1:4],
+  weight = c(2, 3, 4, 5),
+  stringsAsFactors = FALSE
+)
+table2
+#   id name weight
+# 1  2    A      2
+# 2  4    B      3
+# 3  5    C      4
+# 4  7    D      5</code></pre>
+<p>We can see here that some ID and name combinations appear in both tables. Therefore we may wish to join these two tables together such that we can more easily use data from both. In <code>base</code>, the function we use for joining tables together is called <code>merge()</code>. We will see how we can use this one function to perform inner, left, right and full joins.</p>
+<div id="inner-join" class="section level2">
+<h2>Inner Join</h2>
+<p>An inner join selects records that have matching values in both tables within the columns we are joining by, returning all columns. For <code>table1</code> and <code>table2</code>, we will be joining the tables by <code>"id"</code> and <code>"name"</code>. When we perform the inner join therefore, we will expect a <code>data.frame</code> containing the records <code>(id = 5; name = "C")</code> and <code>(id = 7; name = "D")</code> since these records exist in both tables.</p>
+<p>To perform an inner join, the command is quite simple.</p>
+<pre class="r"><code>merge(x = table1, y = table2)
+#   id name height weight
+# 1  5    C      2      4
+# 2  7    D      2      5</code></pre>
+<p>When performing a join, we typically specify which columns we would like to join on. <code>merge()</code> is helpful in that it works out the common columns between the datasets with the following command.</p>
+<pre class="r"><code>by &lt;- intersect(names(table1), names(table2))
+by
+# [1] &quot;id&quot;   &quot;name&quot;</code></pre>
+<p>If we wanted, we could pass the column names explicitly.</p>
+<pre class="r"><code>merge(x = table1, y = table2, by = c(&quot;id&quot;, &quot;name&quot;))
+#   id name height weight
+# 1  5    C      2      4
+# 2  7    D      2      5</code></pre>
+</div>
+<div id="left-join" class="section level2">
+<h2>Left Join</h2>
+<pre class="r"><code>merge(x = table1, y = table2, all.x = TRUE)
+#   id name height weight
+# 1  1    A      1     NA
+# 2  3    B      2     NA
+# 3  5    C      2      4
+# 4  7    D      2      5
+# 5  9    E      2     NA</code></pre>
+</div>
+<div id="right-join" class="section level2">
+<h2>Right Join</h2>
+<pre class="r"><code>merge(x = table1, y = table2, all.y = TRUE)
+#   id name height weight
+# 1  2    A     NA      2
+# 2  4    B     NA      3
+# 3  5    C      2      4
+# 4  7    D      2      5</code></pre>
+</div>
+<div id="full-join" class="section level2">
+<h2>Full Join</h2>
+<pre class="r"><code>merge(x = table1, y = table2, all = TRUE)
+#   id name height weight
+# 1  1    A      1     NA
+# 2  2    A     NA      2
+# 3  3    B      2     NA
+# 4  4    B     NA      3
+# 5  5    C      2      4
+# 6  7    D      2      5
+# 7  9    E      2     NA</code></pre>
+</div>
+</div>
+<div id="filter-joins" class="section level1">
+<h1>Filter Joins</h1>
+<p>For filter joins we will look at some slightly different data.</p>
+<pre class="r"><code>table1 &lt;- data.frame(
+  pupil = rep(1:3, each = 2),
+  test = rep(c(&quot;A&quot;, &quot;B&quot;), 3),
+  score = c(60, 70, 65, 80, 85, 70),
+  stringsAsFactors = FALSE
+)
+table1
+#   pupil test score
+# 1     1    A    60
+# 2     1    B    70
+# 3     2    A    65
+# 4     2    B    80
+# 5     3    A    85
+# 6     3    B    70
+table2 &lt;- table1[c(1, 3, 4), ]
+table2
+#   pupil test score
+# 1     1    A    60
+# 3     2    A    65
+# 4     2    B    80</code></pre>
+<div id="semi-join" class="section level2">
+<h2>Semi-Join</h2>
+<pre class="r"><code>by &lt;- c(&quot;pupil&quot;, &quot;test&quot;)
+rows &lt;- interaction(table1[, by]) %in% interaction(table2[, by])
+rows
+# [1]  TRUE FALSE  TRUE  TRUE FALSE FALSE
+table1[rows, ]
+#   pupil test score
+# 1     1    A    60
+# 3     2    A    65
+# 4     2    B    80</code></pre>
+</div>
+<div id="anti-join" class="section level2">
+<h2>Anti-Join</h2>
+<pre class="r"><code>rows &lt;- !rows
+rows
+# [1] FALSE  TRUE FALSE FALSE  TRUE  TRUE
+table1[rows, ]
+#   pupil test score
+# 2     1    B    70
+# 5     3    A    85
+# 6     3    B    70</code></pre>
+</div>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+</div>
+
+    </div>
+  </article>
+
+  
+
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+
+</main>
+
+      <footer class="footer">
+    
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"/></svg>
+</span></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

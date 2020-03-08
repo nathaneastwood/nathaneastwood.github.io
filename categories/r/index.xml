@@ -5,10 +5,225 @@
     <description>Recent content in R on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Thu, 27 Feb 2020 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 08 Mar 2020 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/categories/r/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>poorman: Replicating dplyr&#39;s Join and Filter Join Functions with base R</title>
+      <link>/2020/03/08/poorman-replicating-dplyrs-join-and-filter-join-functions-with-base-r/</link>
+      <pubDate>Sun, 08 Mar 2020 20:12:00 -0500</pubDate>
+      
+      <guid>/2020/03/08/poorman-replicating-dplyrs-join-and-filter-join-functions-with-base-r/</guid>
+      <description>
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;In my &lt;a href=&#34;https://nathaneastwood.github.io/2020/02/27/building-a-base-dplyr-with-primitives-grouped-operations-pipes-and-more/&#34;&gt;last post&lt;/a&gt; I discussed performing split-apply-combine operations on R &lt;code&gt;data.frame&lt;/code&gt;s and how this functionality was used within &lt;a href=&#34;https://github.com/nathaneastwood/poorman&#34;&gt;&lt;code&gt;poorman&lt;/code&gt;&lt;/a&gt; - a &lt;code&gt;base&lt;/code&gt; R replica of &lt;code&gt;dplyr&lt;/code&gt;. In this post I’d like to talk about replicating &lt;code&gt;dplyr&lt;/code&gt;’s join and filter join functionality, again using nothing but &lt;code&gt;base&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;joins&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Joins&lt;/h1&gt;
+&lt;p&gt;First of all, let’s set up some data to use for our examples. Here I create two &lt;code&gt;data.frame&lt;/code&gt;s; one containing heights associated with names and IDs; the second containing weights also associated with some names and IDs. Some of these ID and name combinations are common to both tables (e.g. &lt;code&gt;c(&#34;id&#34; = 5, &#34;name&#34; = &#34;C&#34;)&lt;/code&gt;) but other IDs are unique to one table or the other (e.g. &lt;code&gt;c(&#34;id&#34; = 1, &#34;name&#34; = &#34;A&#34;)&lt;/code&gt;).&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note that sometimes a list of elements (here name and ID) are somtimes referred to as a tuple.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table1 &amp;lt;- data.frame(
+  id = c(1, 3, 5, 7, 9),
+  name = LETTERS[1:5],
+  height = c(1, 2, 2, 2, 2),
+  stringsAsFactors = FALSE
+)
+table1
+#   id name height
+# 1  1    A      1
+# 2  3    B      2
+# 3  5    C      2
+# 4  7    D      2
+# 5  9    E      2
+table2 &amp;lt;- data.frame(
+  id = c(2, 4, 5, 7),
+  name = LETTERS[1:4],
+  weight = c(2, 3, 4, 5),
+  stringsAsFactors = FALSE
+)
+table2
+#   id name weight
+# 1  2    A      2
+# 2  4    B      3
+# 3  5    C      4
+# 4  7    D      5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;When working with data such as this, we may wish to join these two tables together such that we can more easily use data from both. In &lt;code&gt;base&lt;/code&gt;, the function we use for joining tables together is called &lt;code&gt;merge()&lt;/code&gt;. We will see how we can use this one function to perform inner, left, right and full joins.&lt;/p&gt;
+&lt;div id=&#34;inner-join&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Inner Join&lt;/h2&gt;
+&lt;p&gt;An inner join selects records that have matching values in both tables within the columns we are joining by, returning all columns. For &lt;code&gt;table1&lt;/code&gt; and &lt;code&gt;table2&lt;/code&gt;, we will be joining the tables by &lt;code&gt;&#34;id&#34;&lt;/code&gt; and &lt;code&gt;&#34;name&#34;&lt;/code&gt; since these are the common columns between both tables.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Note that depending on your circumstance you may not wish to join on all common columns. For example you may have two tables that have columns with the same name but actually contain different data.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;When we perform the inner join therefore, we will expect a &lt;code&gt;data.frame&lt;/code&gt; containing the records &lt;code&gt;c(&#34;id&#34; = 5, &#34;name&#34; = &#34;C&#34;)&lt;/code&gt; and &lt;code&gt;c(&#34;id&#34; = 7, &#34;name&#34; = &#34;D&#34;)&lt;/code&gt; since these records exist in both tables.&lt;/p&gt;
+&lt;p&gt;To perform an inner join, we use the &lt;code&gt;merge()&lt;/code&gt; function with no additional parameters, giving the two tables to merge.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;merge(x = table1, y = table2)
+#   id name height weight
+# 1  5    C      2      4
+# 2  7    D      2      5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;When performing a join, we typically specify which columns we would like to join on. &lt;code&gt;merge()&lt;/code&gt; is helpful in that it works out the common columns between the datasets with the following command.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;by &amp;lt;- intersect(names(table1), names(table2))
+by
+# [1] &amp;quot;id&amp;quot;   &amp;quot;name&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If we wanted, we could pass the column names explicitly.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;merge(x = table1, y = table2, by = c(&amp;quot;id&amp;quot;, &amp;quot;name&amp;quot;))
+#   id name height weight
+# 1  5    C      2      4
+# 2  7    D      2      5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In &lt;code&gt;poorman&lt;/code&gt;, we can use the &lt;code&gt;inner_join()&lt;/code&gt; function to perform this type of join.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table1 %&amp;gt;% inner_join(table2)
+# Joining, by = c(&amp;quot;id&amp;quot;, &amp;quot;name&amp;quot;)
+#   id name height weight
+# 1  5    C      2      4
+# 2  7    D      2      5&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;left-join&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Left Join&lt;/h2&gt;
+&lt;p&gt;A left join will include all rows from &lt;code&gt;table1&lt;/code&gt; regardless of whether or not there is a matching record in &lt;code&gt;table2&lt;/code&gt;. For those records which do not have a match, the left join will leave the cells as &lt;code&gt;NA&lt;/code&gt; values. In &lt;code&gt;base&lt;/code&gt;, we perform this type of join with the &lt;code&gt;merge()&lt;/code&gt; function, specifying &lt;code&gt;all.x = TRUE&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;merge(x = table1, y = table2, all.x = TRUE)
+#   id name height weight
+# 1  1    A      1     NA
+# 2  3    B      2     NA
+# 3  5    C      2      4
+# 4  7    D      2      5
+# 5  9    E      2     NA&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In &lt;code&gt;poorman&lt;/code&gt;, this type of join can be performed with &lt;code&gt;left_join()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table1 %&amp;gt;% left_join(table2)
+# Joining, by = c(&amp;quot;id&amp;quot;, &amp;quot;name&amp;quot;)
+#   id name height weight
+# 1  1    A      1     NA
+# 2  3    B      2     NA
+# 3  5    C      2      4
+# 4  7    D      2      5
+# 5  9    E      2     NA&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;right-join&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Right Join&lt;/h2&gt;
+&lt;p&gt;A right join is the opposite of a left join. Here, the &lt;code&gt;merge()&lt;/code&gt; function returns all rows from &lt;code&gt;table2&lt;/code&gt; and the matched rows from &lt;code&gt;table1&lt;/code&gt;; again filling any blank cells with &lt;code&gt;NA&lt;/code&gt;. This time, we specify &lt;code&gt;all.y = TRUE&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;merge(x = table1, y = table2, all.y = TRUE)
+#   id name height weight
+# 1  2    A     NA      2
+# 2  4    B     NA      3
+# 3  5    C      2      4
+# 4  7    D      2      5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In &lt;code&gt;poorman&lt;/code&gt;, this type of join can be performed with, you guessed it, &lt;code&gt;right_join()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table1 %&amp;gt;% right_join(table2)
+# Joining, by = c(&amp;quot;id&amp;quot;, &amp;quot;name&amp;quot;)
+#   id name height weight
+# 1  2    A     NA      2
+# 2  4    B     NA      3
+# 3  5    C      2      4
+# 4  7    D      2      5&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;full-join&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Full Join&lt;/h2&gt;
+&lt;p&gt;A full join will join together all rows from two tables. Like the left and right joins, any rows that do not contain a match will contain &lt;code&gt;NA&lt;/code&gt; in the cells that are missing. Here we specify &lt;code&gt;all = TRUE&lt;/code&gt; within &lt;code&gt;merge()&lt;/code&gt; to represent a full join.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;merge(x = table1, y = table2, all = TRUE)
+#   id name height weight
+# 1  1    A      1     NA
+# 2  2    A     NA      2
+# 3  3    B      2     NA
+# 4  4    B     NA      3
+# 5  5    C      2      4
+# 6  7    D      2      5
+# 7  9    E      2     NA&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Finally &lt;code&gt;poorman&lt;/code&gt; provides &lt;code&gt;full_join()&lt;/code&gt; to do this type of join.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table1 %&amp;gt;% full_join(table2)
+# Joining, by = c(&amp;quot;id&amp;quot;, &amp;quot;name&amp;quot;)
+#   id name height weight
+# 1  1    A      1     NA
+# 2  2    A     NA      2
+# 3  3    B      2     NA
+# 4  4    B     NA      3
+# 5  5    C      2      4
+# 6  7    D      2      5
+# 7  9    E      2     NA&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;filter-joins&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Filter Joins&lt;/h1&gt;
+&lt;p&gt;For filter joins we will look at some slightly different data.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table1 &amp;lt;- data.frame(
+  pupil = rep(1:3, each = 2),
+  test = rep(c(&amp;quot;A&amp;quot;, &amp;quot;B&amp;quot;), 3),
+  score = c(60, 70, 65, 80, 85, 70),
+  stringsAsFactors = FALSE
+)
+table1
+#   pupil test score
+# 1     1    A    60
+# 2     1    B    70
+# 3     2    A    65
+# 4     2    B    80
+# 5     3    A    85
+# 6     3    B    70
+table2 &amp;lt;- table1[c(1, 3, 4), ]
+table2
+#   pupil test score
+# 1     1    A    60
+# 3     2    A    65
+# 4     2    B    80&lt;/code&gt;&lt;/pre&gt;
+&lt;div id=&#34;semi-join&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Semi-Join&lt;/h2&gt;
+&lt;p&gt;A semi-join is slightly different to the other types of joins we have seen thus far. We describe a semi-join as a “filter join”, since a semi-join returns the rows in &lt;code&gt;table1&lt;/code&gt; where the join column tuples in &lt;code&gt;table1&lt;/code&gt; are also found in &lt;code&gt;table2&lt;/code&gt;. So we still specify the column names that we wish to “join” by (in this example it’s &lt;code&gt;c(&#34;pupil&#34;, &#34;test&#34;)&lt;/code&gt;), which is why this is considered a join but we are actually performing a sort of filter on &lt;code&gt;table1&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;by &amp;lt;- c(&amp;quot;pupil&amp;quot;, &amp;quot;test&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Since we are looking for the rows in &lt;code&gt;table1&lt;/code&gt; that are also in &lt;code&gt;table2&lt;/code&gt;, we will be using &lt;code&gt;[.data.frame&lt;/code&gt; to filter &lt;code&gt;table1&lt;/code&gt; by the matching rows. To do this, we will take advantage of &lt;code&gt;base::interaction()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;interaction(table1[, by])
+# [1] 1.A 1.B 2.A 2.B 3.A 3.B
+# Levels: 1.A 2.A 3.A 1.B 2.B 3.B&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As you can see, what this function does is compute a vector of factor levels which represents the interaction of the given columns. So the number before the &lt;code&gt;.&lt;/code&gt; is the pupil and the letter after the &lt;code&gt;.&lt;/code&gt; is the test they took. If we do this for both tables, we can figure out which levels are &lt;code&gt;%in%&lt;/code&gt; both tables. As we can see below, the results of &lt;code&gt;%in%&lt;/code&gt; returns a logical vector that we can use to filter &lt;code&gt;table1&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;interaction(table2[, by])
+# [1] 1.A 2.A 2.B
+# Levels: 1.A 2.A 1.B 2.B
+rows &amp;lt;- interaction(table1[, by]) %in% interaction(table2[, by])
+rows
+# [1]  TRUE FALSE  TRUE  TRUE FALSE FALSE&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So here we can see that levels &lt;code&gt;1.A&lt;/code&gt;, &lt;code&gt;2.A&lt;/code&gt; and &lt;code&gt;2.B&lt;/code&gt; appear in both &lt;code&gt;table1&lt;/code&gt; and &lt;code&gt;table2&lt;/code&gt;. So now we can perform our filter.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table1[rows, ]
+#   pupil test score
+# 1     1    A    60
+# 3     2    A    65
+# 4     2    B    80&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Semi-join functionality is afforded by &lt;code&gt;poorman&lt;/code&gt; using the &lt;code&gt;semi_join()&lt;/code&gt; function.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table1 %&amp;gt;% semi_join(table2)
+# Joining, by = c(&amp;quot;pupil&amp;quot;, &amp;quot;test&amp;quot;, &amp;quot;score&amp;quot;)
+#   pupil test score
+# 1     1    A    60
+# 2     2    A    65
+# 3     2    B    80&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;anti-join&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Anti-Join&lt;/h2&gt;
+&lt;p&gt;An anti-join is slightly different to a semi-join in that it returns all the rows from &lt;code&gt;table1&lt;/code&gt; that &lt;em&gt;do not&lt;/em&gt; appear in &lt;code&gt;table2&lt;/code&gt; when “joining” on the join columns. Using our previously defined &lt;code&gt;rows&lt;/code&gt; variable, we can take the inverse of this logical vector using &lt;code&gt;!&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;rows &amp;lt;- !rows
+rows
+# [1] FALSE  TRUE FALSE FALSE  TRUE  TRUE
+table1[rows, ]
+#   pupil test score
+# 2     1    B    70
+# 5     3    A    85
+# 6     3    B    70&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;poorman&lt;/code&gt; provides a copy of anti-join functionality using &lt;code&gt;anti_join()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;table1 %&amp;gt;% anti_join(table2)
+# Joining, by = c(&amp;quot;pupil&amp;quot;, &amp;quot;test&amp;quot;, &amp;quot;score&amp;quot;)
+#   pupil test score
+# 1     1    B    70
+# 2     3    A    85
+# 3     3    B    70&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;As we can see, the join and filter join functionality provided by &lt;code&gt;dplyr&lt;/code&gt; is also available in &lt;code&gt;base&lt;/code&gt;, you just need to know the parameter details or how to perform the filters efficiently. For your convenience, these functions are now available in &lt;code&gt;poorman&lt;/code&gt; using the same &lt;code&gt;dplyr&lt;/code&gt; API: &lt;code&gt;inner_join()&lt;/code&gt;, &lt;code&gt;left_join()&lt;/code&gt;, &lt;code&gt;right_join()&lt;/code&gt;, &lt;code&gt;full_join()&lt;/code&gt;, &lt;code&gt;semi_join()&lt;/code&gt; and &lt;code&gt;anti_join()&lt;/code&gt;. See &lt;code&gt;poorman::joins&lt;/code&gt; or &lt;code&gt;?poorman::filter_joins&lt;/code&gt; for more details.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>Building A base dplyr With Primitives: Grouped Operations, Pipes and More!</title>
