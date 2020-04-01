@@ -5,10 +5,82 @@
     <description>Recent content on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Sun, 08 Mar 2020 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Wed, 01 Apr 2020 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>poorman: First Release of a base R dplyr Clone</title>
+      <link>/2020/04/01/poorman-first-release-of-a-base-r-dplyr-clone/</link>
+      <pubDate>Wed, 01 Apr 2020 20:12:00 -0500</pubDate>
+      
+      <guid>/2020/04/01/poorman-first-release-of-a-base-r-dplyr-clone/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;The first official release of &lt;code&gt;poorman&lt;/code&gt; (v 0.1.9) is &lt;a href=&#34;https://cran.r-project.org/web/packages/poorman/index.html&#34;&gt;now on CRAN&lt;/a&gt;! You can now install &lt;code&gt;poorman&lt;/code&gt; directly from CRAN with the following code:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;install.packages(&amp;quot;poorman&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In this blog post I want to address some common questions that I have received since I started writing the package.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;what-is-poorman&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;What is &lt;code&gt;poorman&lt;/code&gt;?&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;poorman&lt;/code&gt; is a package that unapologetically attempts to recreate the &lt;code&gt;dplyr&lt;/code&gt; API in a dependency free way using only &lt;code&gt;base&lt;/code&gt; R. &lt;code&gt;poorman&lt;/code&gt; is still under development and doesn’t have all of &lt;code&gt;dplyr&lt;/code&gt;’s functionality but what I would consider the “core” functionality is included. The idea behind &lt;code&gt;poorman&lt;/code&gt; is that a user should be able to take their &lt;code&gt;dplyr&lt;/code&gt; based script and run it using &lt;code&gt;poorman&lt;/code&gt; without any hiccups.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;so-what-does-poorman-include&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;So what does &lt;code&gt;poorman&lt;/code&gt; include?&lt;/h1&gt;
+&lt;p&gt;In this first official release, &lt;code&gt;poorman&lt;/code&gt; includes copies of the key &lt;code&gt;dplyr&lt;/code&gt; functions.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;select(), rename(), pull(), relocate(), mutate(), transmute(), arrange()
+filter(), slice()
+summarise() / summarize()
+group_by(), ungroup()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;poorman&lt;/code&gt; also includes the join functionality.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;inner_join(), left_join(), right_join(), full_join()
+anti_join(), semi_join()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Finally &lt;code&gt;poorman&lt;/code&gt; also includes its own version of the pipe so you do not need to load or install &lt;code&gt;magrittr&lt;/code&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;%&amp;gt;%&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;More functionality is being developed and will be added in time.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;why-develop-poorman&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Why develop &lt;code&gt;poorman&lt;/code&gt;?&lt;/h1&gt;
+&lt;p&gt;This is probably the most common question; why bother developing &lt;code&gt;poorman&lt;/code&gt; when &lt;code&gt;dplyr&lt;/code&gt; already exists. Well there are actually several reasons why I decided to develop it. The most important reason to me though is quite simply because I can. &lt;code&gt;poorman&lt;/code&gt; started out as a personal challenge and a bit of fun. Also as a freelance R developer, it is good to build up my portfolio of open source code that I can show to potential clients.&lt;/p&gt;
+&lt;p&gt;Another reason for developing &lt;code&gt;poorman&lt;/code&gt; is I wanted to challenge a common misconception that &lt;code&gt;base&lt;/code&gt; R is not as powerful, or as good, or as useful as &lt;code&gt;dplyr&lt;/code&gt;. Too often I see and hear comments belittling &lt;code&gt;base&lt;/code&gt; R and as a user of the language for over 10 years now - well before the inception of &lt;code&gt;dplyr&lt;/code&gt; - I find this idea very worrying. &lt;code&gt;poorman&lt;/code&gt;’s package start up message is quite poignant in this regard.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;I’d seen my father. He was a poor man, and I watched him do astonishing things. - Sidney Poitier&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Finally, I have a natural joy of teaching. Writing &lt;code&gt;poorman&lt;/code&gt; gives me a platform to hopefully show useRs two key aspects of R programming in &lt;code&gt;base&lt;/code&gt;; common data manipulation tasks; and non-standard evaulation.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;but-why-not-just-use-dplyr&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;But why not just use &lt;code&gt;dplyr&lt;/code&gt;?&lt;/h1&gt;
+&lt;p&gt;Let’s be honest, the &lt;code&gt;tidyverse&lt;/code&gt; is a fantastic set of packages which have transformed the face of data analysis in R, and &lt;code&gt;dplyr&lt;/code&gt; is arguably one of the most important packages within the &lt;code&gt;tidyverse&lt;/code&gt;. The API is in my opinion very easy to learn and use.&lt;/p&gt;
+&lt;p&gt;Being a part of the &lt;code&gt;tidyverse&lt;/code&gt;, however, means that &lt;code&gt;dplyr&lt;/code&gt; comes with a large number of dependencies that users must also install which is often seen as a disadvantage to using the &lt;code&gt;tidyverse&lt;/code&gt;. Disadvantages of dependencies have been &lt;a href=&#34;http://dirk.eddelbuettel.com/blog/2018/02/28/#017_dependencies&#34;&gt;written about&lt;/a&gt; before and so I won’t go into detail here. However what I will say is that the user may not have a need for additional parts of the &lt;code&gt;tidyverse&lt;/code&gt; and so may not wish to have to install multiple packages to use one or two functions.&lt;/p&gt;
+&lt;p&gt;Some of these dependencies are very useful of course, allowing expansion into other areas such as accessing Spark instances and databases using the same API the user already knows. This is great and if you are using these additional tools then I absolutely recommend that you choose &lt;code&gt;dplyr&lt;/code&gt; over &lt;code&gt;poorman&lt;/code&gt;. However if you don’t need the extra dependencies and functionality that comes with the wider &lt;code&gt;tidyverse&lt;/code&gt; then maybe consider giving the lightweight &lt;code&gt;poorman&lt;/code&gt; a go.&lt;/p&gt;
+&lt;p&gt;Finally a point on installation times, &lt;code&gt;poorman&lt;/code&gt; takes roughly six seconds to install. If you’ve ever had to install or upgrade &lt;code&gt;dplyr&lt;/code&gt; or the &lt;code&gt;tidyverse&lt;/code&gt;, you’ll recognise that this is very fast.&lt;/p&gt;
+&lt;center&gt;
+&lt;img src=&#34;/img/poorman_installation.gif&#34; /&gt;
+&lt;/center&gt;
+&lt;/div&gt;
+&lt;div id=&#34;why-the-name-poorman&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Why the name &lt;code&gt;poorman&lt;/code&gt;?&lt;/h1&gt;
+&lt;p&gt;As I have already mentioned, I have seen comments in the past pertaining to R’s worthlessness without the &lt;code&gt;tidyverse&lt;/code&gt; and so the name &lt;code&gt;poorman&lt;/code&gt; is a subtle play on the the idea that you must be a “poor man” if you use &lt;code&gt;base&lt;/code&gt;. The irony of course is that I have managed to recreate - quite easily - the key parts of the &lt;code&gt;dplyr&lt;/code&gt; API using only &lt;code&gt;base&lt;/code&gt; R.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;why-not-use-data.table-for-the-backend&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Why not use &lt;code&gt;data.table&lt;/code&gt; for the backend?&lt;/h1&gt;
+&lt;p&gt;Because I wanted to build something that was completely dependency free and adding &lt;code&gt;data.table&lt;/code&gt; as an &lt;code&gt;Import&lt;/code&gt; adds a dependency.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;but-doesnt-poorman-have-dependencies&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;But doesn’t &lt;code&gt;poorman&lt;/code&gt; have dependencies?&lt;/h1&gt;
+&lt;p&gt;To answer this, we need to define what we mean by “dependency free”. &lt;code&gt;poorman&lt;/code&gt; does have some dependencies but they are for development purposes only and are therefore listed in the &lt;code&gt;Suggests&lt;/code&gt; part of the &lt;code&gt;DESCRIPTION&lt;/code&gt; file. Thus when a user installs the package, these dependencies are only ever installed if they are explicitly requested. However, &lt;code&gt;poorman&lt;/code&gt; doesn’t have any dependencies that users of the package need to install in order to use its functionality. I use these dependency packages to help me develop more easily. Therefore &lt;code&gt;poorman&lt;/code&gt; isn’t a truly “dependency free” like &lt;code&gt;data.table&lt;/code&gt; is, but it is dependency free for its intended users.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;So if you find yourself needing a dependency free data manipulation package that follows the &lt;code&gt;dplyr&lt;/code&gt; API with short installation times then give &lt;code&gt;poorman&lt;/code&gt; a try. Equally if you find any issues, please submit an issue to &lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues&#34;&gt;&lt;code&gt;GitHub&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>poorman: Replicating dplyr&#39;s Join and Filter Join Functions with base R</title>
