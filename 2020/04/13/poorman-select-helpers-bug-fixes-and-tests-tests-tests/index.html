@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>poorman: Select helpers, bug fixes and tests, tests, tests! - Random R Ramblings</title>
+<meta property="og:title" content="poorman: Select helpers, bug fixes and tests, tests, tests! - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+      <li><a href="https://github.com/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://www.linkedin.com/in/nathaneastwood/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="currentColor" d="M290.7 311L95 269.7 86.8 309l195.7 41zm51-87L188.2 95.7l-25.5 30.8 153.5 128.3zm-31.2 39.7L129.2 179l-16.7 36.5L293.7 300zM262 32l-32 24 119.3 160.3 32-24zm20.5 328h-200v39.7h200zm39.7 80H42.7V320h-40v160h359.5V320h-40z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://twitter.com/nathaneastwood_"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="/about/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm95.8 32.6L272 480l-32-136 32-56h-96l32 56-32 136-47.8-191.4C56.9 292 0 350.3 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-72.1-56.9-130.4-128.2-133.8z"/></svg>
+</span></i></a></li>
+    
+  </ul>
+  
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">7 min read</span>
+    
+
+    <h1 class="article-title">poorman: Select helpers, bug fixes and tests, tests, tests!</h1>
+
+    
+    <span class="article-date">2020-04-13</span>
+    
+
+    <div class="article-content">
+      
+<script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Hello all and welcome to another edition of the <code>poorman</code> series of blog posts. In this series I am discussing my progress in writing a <code>base</code> R equivalent of <code>dplyr</code>. What’s nice about this series is that if you’re not into <code>poorman</code> and would prefer just to use <code>dplyr</code>, then that’s absolutely OK! By highlighting <code>poorman</code> functionality, this series of blog posts simultaneously highlights <code>dplyr</code> functionality too!</p>
+<p>Today I want to showcase some column selection helper features from the <code>tidyselect</code> package - often used in conjunction with <code>dplyr</code> - which I have finished now replicated within <code>poorman</code>, of course using <code>base</code> only. I’ll also discuss a little bit about what is happening in the background of <code>poorman</code>’s development with regards to testing.</p>
+</div>
+<div id="select-helpers" class="section level1">
+<h1>Select Helpers</h1>
+<p>The first official release version of <code>poorman</code> (v 0.1.9) was the first version that I considered to contain all of the “core” functionality of <code>dplyr</code>; everything from <code>select()</code> to <code>group_by()</code> and <code>summarise()</code>. Now that that functionality is nailed down, it gives me time to focus of some of the smaller features of <code>dplyr</code> and the wider <code>tidyverse</code> and so over the last couple of weeks I have been working on adding the <code>tidyselect::select_helpers</code> to <code>poorman</code>. For those that are unaware, <code>select_helpers</code> are a collection of functions that help the user to select variables based on their names. For example you may wish to select all columns which start with a certain prefix or maybe select columns matching a particular regular expression. Let’s take a look at some examples.</p>
+<div id="selecting-columns-based-on-partial-column-names" class="section level2">
+<h2>Selecting Columns Based On Partial Column Names</h2>
+<p>If your data contain lots of columns whose names share a similar structure, you can use partial matching by adding <code>starts_with()</code>, <code>ends_with()</code> or <code>contains()</code> in your <code>select()</code>/<code>relocate()</code> statement.</p>
+<pre class="r"><code>library(poorman, warn.conflicts = FALSE)
+iris %&gt;% select(starts_with(&quot;Petal&quot;), ends_with(&quot;Width&quot;)) %&gt;% head()
+#   Petal.Length Petal.Width Sepal.Width
+# 1          1.4         0.2         3.5
+# 2          1.4         0.2         3.0
+# 3          1.3         0.2         3.2
+# 4          1.5         0.2         3.1
+# 5          1.4         0.2         3.6
+# 6          1.7         0.4         3.9</code></pre>
+</div>
+<div id="reordering-columns" class="section level2">
+<h2>Reordering Columns</h2>
+<p>The columns of the <code>iris</code> dataset come in the following order.</p>
+<pre class="r"><code>colnames(iris)
+# [1] &quot;Sepal.Length&quot; &quot;Sepal.Width&quot;  &quot;Petal.Length&quot; &quot;Petal.Width&quot;  &quot;Species&quot;</code></pre>
+<p>But what if we wanted all of the “Width” columns at the start of this <code>data.frame</code>? There are a couple of ways in which we can achieve this. Firstly, we can use <code>select()</code> in combination with the select helper <code>everything()</code>.</p>
+<pre class="r"><code>iris %&gt;% select(&quot;Petal.Width&quot;, &quot;Sepal.Width&quot;, everything()) %&gt;% head()
+#   Petal.Width Sepal.Width Sepal.Length Petal.Length Species
+# 1         0.2         3.5          5.1          1.4  setosa
+# 2         0.2         3.0          4.9          1.4  setosa
+# 3         0.2         3.2          4.7          1.3  setosa
+# 4         0.2         3.1          4.6          1.5  setosa
+# 5         0.2         3.6          5.0          1.4  setosa
+# 6         0.4         3.9          5.4          1.7  setosa</code></pre>
+<p><code>poorman</code> here first selects the columns “Petal.Width” and “Sepal.Width” before selecting everything else. This is great, but if your data contain a lot of columns containing “Width” then you will have to write out a lot of column names. Well this is where we can use <code>relocate()</code> and the select helper <code>contains()</code> to move those columns to the start of <code>iris</code>.</p>
+<pre class="r"><code>iris %&gt;% relocate(contains(&quot;Width&quot;)) %&gt;% head()
+#   Sepal.Width Petal.Width Sepal.Length Petal.Length Species
+# 1         3.5         0.2          5.1          1.4  setosa
+# 2         3.0         0.2          4.9          1.4  setosa
+# 3         3.2         0.2          4.7          1.3  setosa
+# 4         3.1         0.2          4.6          1.5  setosa
+# 5         3.6         0.2          5.0          1.4  setosa
+# 6         3.9         0.4          5.4          1.7  setosa</code></pre>
+<p>By default, <code>relocate()</code> will move all selected columns to the start of the <code>data.frame</code>. You can adjust this behaviour with the <code>.before</code> and <code>.after</code> parameters. Let’s move the “Petal” columns to appear after the “Species” column.</p>
+<pre class="r"><code>iris %&gt;% relocate(contains(&quot;Petal&quot;), .after = Species) %&gt;% head()
+#   Sepal.Length Sepal.Width Species Petal.Length Petal.Width
+# 1          5.1         3.5  setosa          1.4         0.2
+# 2          4.9         3.0  setosa          1.4         0.2
+# 3          4.7         3.2  setosa          1.3         0.2
+# 4          4.6         3.1  setosa          1.5         0.2
+# 5          5.0         3.6  setosa          1.4         0.2
+# 6          5.4         3.9  setosa          1.7         0.4</code></pre>
+</div>
+<div id="select-columns-using-a-regular-expression" class="section level2">
+<h2>Select Columns Using a Regular Expression</h2>
+<p>The previous helper functions work with exact pattern matches. Let’s say you have similar patterns within your column names that are not quite the same, you can use regular expressions with the <code>matches()</code> helper function to identify them. Here I will use the <code>mtcars</code> dataset and look to extract all columns which start with a “w” or a “d” and end with a “t”.</p>
+<pre class="r"><code>mtcars %&gt;% select(matches(&quot;^[wd].*[t]$&quot;)) %&gt;% head()
+#                   drat    wt
+# Mazda RX4         3.90 2.620
+# Mazda RX4 Wag     3.90 2.875
+# Datsun 710        3.85 2.320
+# Hornet 4 Drive    3.08 3.215
+# Hornet Sportabout 3.15 3.440
+# Valiant           2.76 3.460</code></pre>
+</div>
+<div id="the-select-helper-list" class="section level2">
+<h2>The Select Helper List</h2>
+<p>We have seen a few examples of select helpers now available in <code>poorman</code>. There are more, however, and the following list details each of them. Remember that these functions can be used to help users <code>select()</code> and <code>relocate()</code> columns within <code>data.frame</code>s.</p>
+<ul>
+<li><code>starts_with()</code>: Starts with a prefix.</li>
+<li><code>ends_with()</code>: Ends with a suffix.</li>
+<li><code>contains()</code>: Contains a literal string.</li>
+<li><code>matches()</code>: Matches a regular expression.</li>
+<li><code>num_range()</code>: Matches a numerical range like <code>x01</code>, <code>x02</code>, <code>x03</code>.</li>
+<li><code>all_of()</code>: Matches variable names in a character vector. All names must be present, otherwise an out-of-bounds error is thrown.</li>
+<li><code>any_of()</code>: Same as <code>all_of()</code>, except that no error is thrown for names that don’t exist.</li>
+<li><code>everything()</code>: Matches all variables.</li>
+<li><code>last_col()</code>: Select last variable, possibly with an offset.</li>
+</ul>
+</div>
+</div>
+<div id="docker" class="section level1">
+<h1>Docker</h1>
+<p>There was a request on Twitter to put together a Docker image for <code>poorman</code>. This has now been done and can be seen on <a href="https://hub.docker.com/repository/docker/nathaneastwood/poorman">Dockerhub</a>. This means if you have Docker installed, you can run a containerised version of <code>poorman</code> easily with the following line of code.</p>
+<pre class="bash"><code>docker run --rm -it nathaneastwood/poorman</code></pre>
+</div>
+<div id="test-test-test" class="section level1">
+<h1>Test, Test, Test!</h1>
+<p>Since the <a href="https://nathaneastwood.github.io/2020/04/01/poorman-first-release-of-a-base-r-dplyr-clone/">last release</a> of <code>poorman</code> (v 0.1.9) to CRAN, I have been working on a few bugs that I and other users of the package had identified. I’m happy to say that these have now been squashed and the <a href="https://github.com/nathaneastwood/poorman/issues">issues list</a> is looking very empty. As a brief overview, the following problems are now fixed:</p>
+<ul>
+<li><code>mutate()</code> column creations are immediately available, e.g. <code>mtcars %&gt;% mutate(mpg2 = mpg * 2, mpg4 = mpg2 * 2)</code> will create columns named <code>mpg2</code> and <code>mpg4</code></li>
+<li><code>group_by()</code> groups now persist in selections, e.g. <code>mtcars %&gt;% group_by(am) %&gt;% select(mpg)</code> will return <code>am</code> and <code>mpg</code> columns</li>
+<li><code>slice()</code> now duplicates rows, e.g. <code>mtcars %&gt;% slice(2, 2, 2)</code> will return row 2 three times</li>
+<li><code>summarize()</code> is now exported</li>
+</ul>
+<p><code>dplyr</code> is a very well known and extremely well developed package. In order for <code>poorman</code> to have any credibility, it needs to work correctly. Therefore a large amount of effort and energy has gone into testing <code>poorman</code> to ensure it produces the results one would expect. Since adding all of the new features and bug fixes described in this blog, <code>poorman</code> has surpassed 100 tests!</p>
+<pre class="r"><code>tinytest::test_all()                                    
+# Running test_arrange.R................    5 tests OK
+# Running test_filter.R.................    6 tests OK
+# Running test_groups.R.................    5 tests OK
+# Running test_joins_filter.R...........    4 tests OK
+# Running test_joins.R..................    7 tests OK
+# Running test_mutate.R.................    6 tests OK
+# Running test_pull.R...................    6 tests OK
+# Running test_relocate.R...............    6 tests OK
+# Running test_rename.R.................    4 tests OK
+# Running test_rownames.R...............    2 tests OK
+# Running test_select_helpers.R.........   25 tests OK
+# Running test_select.R.................   13 tests OK
+# Running test_slice.R..................    5 tests OK
+# Running test_summarise.R..............    6 tests OK
+# Running test_transmute.R..............    3 tests OK
+# Running test_utils.R..................    1 tests OK
+# [1] &quot;All ok, 104 results&quot;</code></pre>
+<p>This also means that the package coverage is extremely high.</p>
+<pre class="r"><code>covr::package_coverage()                                                                                        #
+# poorman Coverage: 97.87%
+# R/utils.R: 80.00%
+# R/group.R: 90.91%
+# R/joins.R: 92.86%
+# R/arrange.R: 100.00%
+# R/filter.R: 100.00%
+# R/init.R: 100.00%
+# R/joins_filtering.R: 100.00%
+# R/mutate.R: 100.00%
+# R/pipe.R: 100.00%
+# R/pull.R: 100.00%
+# R/relocate.R: 100.00%
+# R/rename.R: 100.00%
+# R/rownames.R: 100.00%
+# R/select_helpers.R: 100.00%
+# R/select.R: 100.00%
+# R/slice.R: 100.00%
+# R/summarise.R: 100.00%
+# R/transmute.R: 100.00%</code></pre>
+<p>I hope this gives users of <code>poorman</code> that extra confidence when using the package. I have now submitted this updated version of <code>poorman</code> to CRAN and I am just waiting on their feedback so hopefully in the coming days it will be available. Watch this space!</p>
+</div>
+
+    </div>
+  </article>
+
+  
+
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+
+</main>
+
+      <footer class="footer">
+    
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"/></svg>
+</span></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+
