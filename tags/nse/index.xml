@@ -5,10 +5,141 @@
     <description>Recent content in nse on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Mon, 13 Apr 2020 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 17 May 2020 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/tags/nse/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>poorman: The Selectificator 2000!</title>
+      <link>/2020/05/17/poorman-the-selectificator-2000/</link>
+      <pubDate>Sun, 17 May 2020 20:12:00 -0500</pubDate>
+      
+      <guid>/2020/05/17/poorman-the-selectificator-2000/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Welcome to my series of blog posts about my data manipulation package, &lt;code&gt;{poorman}&lt;/code&gt;. For those of you that don’t know, &lt;code&gt;{poorman}&lt;/code&gt; is aiming to be a replication of &lt;code&gt;{dplyr}&lt;/code&gt; but using only &lt;code&gt;{base}&lt;/code&gt; R, and therefore be completely dependency free. What’s nice about this series is that if you’re not into &lt;code&gt;{poorman}&lt;/code&gt; and would prefer just to use &lt;code&gt;{dplyr}&lt;/code&gt;, then that’s absolutely OK! By highlighting &lt;code&gt;{poorman}&lt;/code&gt; functionality, this series of blog posts simultaneously highlights &lt;code&gt;{dplyr}&lt;/code&gt; functionality too! However I also describe how I developed the internals of &lt;code&gt;{poorman}&lt;/code&gt;, often highlighting useful &lt;code&gt;{base}&lt;/code&gt; R tips and tricks.&lt;/p&gt;
+&lt;p&gt;I recently released v0.2.0 of &lt;code&gt;{poorman}&lt;/code&gt; which you can install from &lt;a href=&#34;https://cran.r-project.org/web/packages/poorman/&#34;&gt;CRAN&lt;/a&gt; and so today I am going to talk about my progress in expanding the flexibility of the &lt;code&gt;select()&lt;/code&gt; function. But I’m not just going to show you what it can do, I am going to show you how. If you’re interested in learning a little bit about non-standard evaluation in R then be sure to read on.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-selectificator-1000&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;The Selectificator 1000&lt;/h1&gt;
+&lt;p&gt;Before v0.2.0, &lt;code&gt;{poorman}&lt;/code&gt; was using a form of non-standard evaluation which converts function inputs to character strings and then uses those to figure out which columns to select. Specifically, &lt;code&gt;{poorman}&lt;/code&gt; includes the following helper function.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;deparse_dots &amp;lt;- function(...) {
+  vapply(substitute(...()), deparse, NA_character_)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is an unexported function since it is not user facing but you can find it in the code on GitHub &lt;a href=&#34;https://github.com/nathaneastwood/poorman/blob/master/R/utils.R#L1&#34;&gt;here&lt;/a&gt;. Let’s dig into what this function does a little, but first we will define a temporary function to show by example.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select &amp;lt;- function(...) {
+  deparse_dots(...)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now of course in the real &lt;code&gt;select()&lt;/code&gt; function, &lt;code&gt;select()&lt;/code&gt; takes both data (passed to &lt;code&gt;.data&lt;/code&gt;) and column names (passed to &lt;code&gt;...&lt;/code&gt;) as inputs and then returns a subset of the data object containing only those columns. In our temporary function, we are just interested in the evaluation of the column names. So let’s try it out.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select(x, y)
+# [1] &amp;quot;x&amp;quot; &amp;quot;y&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Here we passed two objects, &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; which are intended to represent our column names. These objects are in fact symbols which we would expect to be evaluated, but they weren’t; they are instead turned into character strings. This is thanks to the &lt;code&gt;deparse()&lt;/code&gt; and &lt;code&gt;substitute()&lt;/code&gt; combination. &lt;code&gt;deparse_dots()&lt;/code&gt; first uses &lt;code&gt;substitute()&lt;/code&gt; to return the unevaluated expression (in our case &lt;code&gt;...()&lt;/code&gt;) and substitutes any variables bound in the environment (here &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt;). &lt;code&gt;deparse_dots()&lt;/code&gt; then loops over each of these inputs and deparses them. From the help page, &lt;code&gt;?deparse&lt;/code&gt;:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Turn unevaluated expressions into character strings.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;So now we have our function column inputs as character strings. This is a good start as we can now match on those character strings with the column names of our data (&lt;code&gt;match(deparse_dots(...), colnames(.data))&lt;/code&gt;) to get the integer column positions of &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt;. But what if the user inputs, for example, an integer?&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select(1, 3, 5)
+# [1] &amp;quot;1&amp;quot; &amp;quot;3&amp;quot; &amp;quot;5&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This now poses a problem. Does the user here mean that they want the first, third and fifth columns returned? Or do they mean that there are columns within their &lt;code&gt;data.frame&lt;/code&gt; called “1”, “3” and “5” - which aren’t necessarily in the first, third and fifth positions - and those are the columns they would like? So the problem with this approach is that when everything is converted to characters, it is almost impossible to know whether the user input to the function is a column name, a column integer position or a function like a &lt;a href=&#34;https://nathaneastwood.github.io/2020/04/13/poorman-select-helpers-bug-fixes-and-tests-tests-tests/&#34;&gt;select helper&lt;/a&gt;, with any degree of certainty. The function has to &lt;code&gt;try()&lt;/code&gt; certain things by making certain assumptions and of course making an assumption makes…well, you’ve heard the saying.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-selectificator-2000&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;The Selectificator 2000&lt;/h1&gt;
+&lt;p&gt;This is where the upgrades to the &lt;code&gt;poorman::select()&lt;/code&gt; function come in. As a user I want to be able to pass integers, numerics, character strings, symbols and even functions to be interpreted by the &lt;code&gt;select()&lt;/code&gt; function correctly and return the columns I desire. This is where the next line of code - which is absolutely brilliant - comes in.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;eval(substitute(alist(...)))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Let’s break this function down and see what it does. We will work with a function and build it up bit by bit.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select &amp;lt;- function(...) {
+  alist(...)
+}
+dummy_select(x, y)
+# [[1]]
+# ...&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Ok, not so exciting, right? What about if we wrap this in substitute?&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select &amp;lt;- function(...) {
+  substitute(alist(...))
+}
+dummy_select(x, y)
+# alist(x, y)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we can see that we have managed to pass in our inputs but they seem to be wrapped in an unevaluated call to &lt;code&gt;alist()&lt;/code&gt;, so let’s try and evaluate it.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select &amp;lt;- function(...) {
+  eval(substitute(alist(...)))
+}
+dummy_select(x, y)
+# [[1]]
+# x
+# 
+# [[2]]
+# y&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Perfect! Now we have our unevaluated function inputs stored in a list. But what is so great about that? Well, let’s take a look at the structure of this output.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(dummy_select(x, y))
+# List of 2
+#  $ : symbol x
+#  $ : symbol y&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So we can see that our inputs have been stored as their appropriate class; symbols! As a matter of fact, this occurs no matter what we use as our inputs.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(dummy_select(1L, 2, &amp;quot;x&amp;quot;, y, starts_with(&amp;quot;R&amp;quot;)))
+# List of 5
+#  $ : int 1
+#  $ : num 2
+#  $ : chr &amp;quot;x&amp;quot;
+#  $ : symbol y
+#  $ : language starts_with(&amp;quot;R&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is fantastic. What this means is that we can now define functionality that can handle each of the separate types we typically expect being used in a call to &lt;code&gt;select()&lt;/code&gt;. All of this magic is owed to the &lt;code&gt;alist()&lt;/code&gt; function, let’s take a look at the documentation.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;alist&lt;/code&gt; handles its arguments as if they described function arguments. So the values are not evaluated, and tagged arguments with no value are allowed whereas &lt;code&gt;list&lt;/code&gt; simply ignores them.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;So if we had used the &lt;code&gt;list()&lt;/code&gt; function, it would have attempted to evaluate our inputs to the &lt;code&gt;dummy_select()&lt;/code&gt; function whereas &lt;code&gt;alist()&lt;/code&gt; does not - it stores them as unevaluated objects.&lt;/p&gt;
+&lt;p&gt;Now, this starts to get really interesting when we start to take a look at the &lt;code&gt;language&lt;/code&gt; inputs. When using &lt;code&gt;dplyr::select()&lt;/code&gt;, the user is able to select columns in a number of ways. Let’s take a look at some of them and what the structure of those look like.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(dummy_select(!w, x:y, -z))
+# List of 3
+#  $ : language !w
+#  $ : language x:y
+#  $ : language -z&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So selecting columns through the use of an exclamation mark (negation), a colon or a minus sign actually gives us a &lt;code&gt;language&lt;/code&gt; object. Ok, so what? What is so special about this? Well what makes this so useful to us is how we can interact with the objects. We can actually access parts of the &lt;code&gt;language&lt;/code&gt; object, much in the same way we do with a &lt;code&gt;list()&lt;/code&gt;. Let’s take a look.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;obj &amp;lt;- dummy_select(x:y)
+obj[[1]][1]
+# `:`()&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So operators are actually functions. In fact, in R, everything is an object and we interact with those objects using functions, so this makes sense. Let’s look a bit deeper into this object.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;obj[[1]][[1]]
+# `:`
+obj[[1]][[2]]
+# x
+obj[[1]][[3]]
+# y&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So our function input, &lt;code&gt;x:y&lt;/code&gt;, can be broken down into it’s individual components. We know that the components are made up of the colon function as well as &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt;, but what is the structure of these final two components?&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(obj[[1]][[2]])
+#  symbol x
+str(obj[[1]][[3]])
+#  symbol y&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;They are symbols! So now we can handle these much in the same way as we did with the symbol inputs in the first instance, because remember, just passing &lt;code&gt;x&lt;/code&gt; or &lt;code&gt;y&lt;/code&gt; to our &lt;code&gt;dummy_select()&lt;/code&gt; function returned a symbol.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(dummy_select(x, y))
+# List of 2
+#  $ : symbol x
+#  $ : symbol y&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So there you have it! This is how you, as the user, are now able to perform &lt;code&gt;select()&lt;/code&gt; calls with &lt;code&gt;{poorman}&lt;/code&gt; like this:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(poorman, warn.conflicts = FALSE)
+mtcars %&amp;gt;%
+  select(drat, mpg:hp, starts_with(&amp;quot;g&amp;quot;), everything()) %&amp;gt;%
+  head()
+#                   drat  mpg cyl disp  hp gear    wt  qsec vs am carb
+# Mazda RX4         3.90 21.0   6  160 110    4 2.620 16.46  0  1    4
+# Mazda RX4 Wag     3.90 21.0   6  160 110    4 2.875 17.02  0  1    4
+# Datsun 710        3.85 22.8   4  108  93    4 2.320 18.61  1  1    1
+# Hornet 4 Drive    3.08 21.4   6  258 110    3 3.215 19.44  1  0    1
+# Hornet Sportabout 3.15 18.7   8  360 175    3 3.440 17.02  0  0    2
+# Valiant           2.76 18.1   6  225 105    3 3.460 20.22  1  0    1&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;This post has taken a look at two separate non-standard evaluation approaches - using nothing but &lt;code&gt;{base}&lt;/code&gt; - deployed within the &lt;code&gt;{poorman}&lt;/code&gt; package. We have seen how to break down &lt;code&gt;language&lt;/code&gt; objects to pick out key pieces of information from them. We also saw how to determine the object types of function inputs and why this is important to consider. In particular, this showed how I was able to transform the &lt;code&gt;select()&lt;/code&gt; function into the omega selectificator function…of doom.&lt;/p&gt;
+&lt;p&gt;As this blog post is quite long, I haven’t gone into any further details of the internals of &lt;code&gt;{poorman}&lt;/code&gt; however if you are interested in taking a closer look at how I handle the different input types, you can see the code on the relevant &lt;code&gt;{poorman}&lt;/code&gt; &lt;a href=&#34;https://github.com/nathaneastwood/poorman/blob/master/R/select_positions.R&#34;&gt;GitHub page&lt;/a&gt;. &lt;code&gt;{poorman}&lt;/code&gt; is still a work in progress but as you can see, it already has a lot of functionality you know and love from &lt;code&gt;{dplyr}&lt;/code&gt; so if you are working on a new project and don’t want to have to deal with dependency management, especially if you are sharing work with colleagues, why not give &lt;code&gt;{poorman}&lt;/code&gt; a try?&lt;/p&gt;
+&lt;p&gt;If you’d like to show your support for &lt;code&gt;{poorman}&lt;/code&gt;, please consider giving the package a &lt;a href=&#34;https://github.com/nathaneastwood/poorman/stargazers&#34;&gt;Star on Github&lt;/a&gt; as it gives me that boost of dopamine needed to continue development.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>poorman: Select helpers, bug fixes and tests, tests, tests!</title>
@@ -157,137 +288,6 @@ iris %&amp;gt;% select(starts_with(&amp;quot;Petal&amp;quot;), ends_with(&amp;qu
 # R/summarise.R: 100.00%
 # R/transmute.R: 100.00%&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;I hope this gives users of &lt;code&gt;poorman&lt;/code&gt; that extra confidence when using the package. I have now submitted this updated version of &lt;code&gt;poorman&lt;/code&gt; to CRAN and I am just waiting on their feedback so hopefully in the coming days it will be available. Watch this space!&lt;/p&gt;
-&lt;/div&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>poorman: The Selectificator 2000!</title>
-      <link>/2020/04/13/poorman-the-selectificator-2000/</link>
-      <pubDate>Mon, 13 Apr 2020 20:12:00 -0500</pubDate>
-      
-      <guid>/2020/04/13/poorman-the-selectificator-2000/</guid>
-      <description>
-&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
-
-
-&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Introduction&lt;/h1&gt;
-&lt;p&gt;Welcome to my series of blog posts about my data manipulation package, &lt;code&gt;{poorman}&lt;/code&gt;. For those of you that don’t know, &lt;code&gt;{poorman}&lt;/code&gt; is aiming to be a replication of &lt;code&gt;{dplyr}&lt;/code&gt; but using only &lt;code&gt;{base}&lt;/code&gt; R, and therefore be completely dependency free. What’s nice about this series is that if you’re not into &lt;code&gt;{poorman}&lt;/code&gt; and would prefer just to use &lt;code&gt;{dplyr}&lt;/code&gt;, then that’s absolutely OK! By highlighting &lt;code&gt;{poorman}&lt;/code&gt; functionality, this series of blog posts simultaneously highlights &lt;code&gt;{dplyr}&lt;/code&gt; functionality too! However I also describe how I developed the internals of &lt;code&gt;{poorman}&lt;/code&gt;, often highlighting useful &lt;code&gt;{base}&lt;/code&gt; R tips and tricks.&lt;/p&gt;
-&lt;p&gt;I recently released v0.2.0 of &lt;code&gt;{poorman}&lt;/code&gt; which you can install from &lt;a href=&#34;https://cran.r-project.org/web/packages/poorman/&#34;&gt;CRAN&lt;/a&gt; and so today I am going to talk about my progress in expanding the flexibility of the &lt;code&gt;select()&lt;/code&gt; function. But I’m not just going to show you what it can do, I am going to show you how. If you’re interested in learning a little bit about non-standard evaluation in R then be sure to read on.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;the-selectificator-1000&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;The Selectificator 1000&lt;/h1&gt;
-&lt;p&gt;Before v0.2.0, &lt;code&gt;{poorman}&lt;/code&gt; was using a form of non-standard evaluation which converts function inputs to character strings and then uses those to figure out which columns to select. Specifically, &lt;code&gt;{poorman}&lt;/code&gt; includes the following helper function.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;deparse_dots &amp;lt;- function(...) {
-  vapply(substitute(...()), deparse, NA_character_)
-}&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This is an unexported function since it is not user facing but you can find it in the code on GitHub &lt;a href=&#34;https://github.com/nathaneastwood/poorman/blob/master/R/utils.R#L1&#34;&gt;here&lt;/a&gt;. Let’s dig into what this function does a little, but first we will define a temporary function to show by example.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select &amp;lt;- function(...) {
-  deparse_dots(...)
-}&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now of course in the real &lt;code&gt;select()&lt;/code&gt; function, &lt;code&gt;select()&lt;/code&gt; takes both data (passed to &lt;code&gt;.data&lt;/code&gt;) and column names (passed to &lt;code&gt;...&lt;/code&gt;) as inputs and then returns a subset of the data object containing only those columns. In our temporary function, we are just interested in the evaluation of the column names. So let’s try it out.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select(x, y)
-# [1] &amp;quot;x&amp;quot; &amp;quot;y&amp;quot;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Here we passed two objects, &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; which are intended to represent our column names. These objects are in fact symbols which we would expect to be evaluated, but they weren’t; they are instead turned into character strings. This is thanks to the &lt;code&gt;deparse()&lt;/code&gt; and &lt;code&gt;substitute()&lt;/code&gt; combination. &lt;code&gt;deparse_dots()&lt;/code&gt; first uses &lt;code&gt;substitute()&lt;/code&gt; to return the unevaluated expression (in our case &lt;code&gt;...()&lt;/code&gt;) and substitutes any variables bound in the environment (here &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt;). &lt;code&gt;deparse_dots()&lt;/code&gt; then loops over each of these inputs and deparses them. From the help page, &lt;code&gt;?deparse&lt;/code&gt;:&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Turn unevaluated expressions into character strings.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;So now we have our function column inputs as character strings. This is a good start as we can now match on those character strings with the column names of our data (&lt;code&gt;match(deparse_dots(...), colnames(.data))&lt;/code&gt;) to get the integer column positions of &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt;. But what if the user inputs, for example, an integer?&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select(1, 3, 5)
-# [1] &amp;quot;1&amp;quot; &amp;quot;3&amp;quot; &amp;quot;5&amp;quot;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This now poses a problem. Does the user here mean that they want the first, third and fifth columns returned? Or do they mean that there are columns within their &lt;code&gt;data.frame&lt;/code&gt; called “1”, “3” and “5” - which aren’t necessarily in the first, third and fifth positions - and those are the columns they would like? So the problem with this approach is that when everything is converted to characters, it is almost impossible to know whether the user input to the function is a column name, a column integer position or a function like a &lt;a href=&#34;https://nathaneastwood.github.io/2020/04/13/poorman-select-helpers-bug-fixes-and-tests-tests-tests/&#34;&gt;select helper&lt;/a&gt;, with any degree of certainty. The function has to &lt;code&gt;try()&lt;/code&gt; certain things by making certain assumptions and of course making an assumption makes…well, you’ve heard the saying.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div id=&#34;the-selectificator-2000&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;The Selectificator 2000&lt;/h1&gt;
-&lt;p&gt;This is where the upgrades to the &lt;code&gt;poorman::select()&lt;/code&gt; function come in. As a user I want to be able to pass integers, numerics, character strings, symbols and even functions to be interpreted by the &lt;code&gt;select()&lt;/code&gt; function correctly and return the columns I desire. This is where the next line of code - which is absolutely brilliant - comes in.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;eval(substitute(alist(...)))&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Let’s break this function down and see what it does. We will work with a function and build it up bit by bit.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select &amp;lt;- function(...) {
-  alist(...)
-}
-dummy_select(x, y)
-# [[1]]
-# ...&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Ok, not so exciting, right? What about if we wrap this in substitute?&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select &amp;lt;- function(...) {
-  substitute(alist(...))
-}
-dummy_select(x, y)
-# alist(x, y)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Now we can see that we have managed to pass in our inputs but they seem to be wrapped in an unevaluated call to &lt;code&gt;alist()&lt;/code&gt;, so let’s try and evaluate it.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dummy_select &amp;lt;- function(...) {
-  eval(substitute(alist(...)))
-}
-dummy_select(x, y)
-# [[1]]
-# x
-# 
-# [[2]]
-# y&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Perfect! Now we have our unevaluated function inputs stored in a list. But what is so great about that? Well, let’s take a look at the structure of this output.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(dummy_select(x, y))
-# List of 2
-#  $ : symbol x
-#  $ : symbol y&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So we can see that our inputs have been stored as their appropriate class; symbols! As a matter of fact, this occurs no matter what we use as our inputs.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(dummy_select(1L, 2, &amp;quot;x&amp;quot;, y, starts_with(&amp;quot;R&amp;quot;)))
-# List of 5
-#  $ : int 1
-#  $ : num 2
-#  $ : chr &amp;quot;x&amp;quot;
-#  $ : symbol y
-#  $ : language starts_with(&amp;quot;R&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;This is fantastic. What this means is that we can now define functionality that can handle each of the separate types we typically expect being used in a call to &lt;code&gt;select()&lt;/code&gt;. All of this magic is owed to the &lt;code&gt;alist()&lt;/code&gt; function, let’s take a look at the documentation.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;code&gt;alist&lt;/code&gt; handles its arguments as if they described function arguments. So the values are not evaluated, and tagged arguments with no value are allowed whereas &lt;code&gt;list&lt;/code&gt; simply ignores them.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;So if we had used the &lt;code&gt;list()&lt;/code&gt; function, it would have attempted to evaluate our inputs to the &lt;code&gt;dummy_select()&lt;/code&gt; function whereas &lt;code&gt;alist()&lt;/code&gt; does not - it stores them as unevaluated objects.&lt;/p&gt;
-&lt;p&gt;Now, this starts to get really interesting when we start to take a look at the &lt;code&gt;language&lt;/code&gt; inputs. When using &lt;code&gt;dplyr::select()&lt;/code&gt;, the user is able to select columns in a number of ways. Let’s take a look at some of them and what the structure of those look like.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(dummy_select(!w, x:y, -z))
-# List of 3
-#  $ : language !w
-#  $ : language x:y
-#  $ : language -z&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So selecting columns through the use of an exclamation mark (negation), a colon or a minus sign actually gives us a &lt;code&gt;language&lt;/code&gt; object. Ok, so what? What is so special about this? Well what makes this so useful to us is how we can interact with the objects. We can actually access parts of the &lt;code&gt;language&lt;/code&gt; object, much in the same way we do with a &lt;code&gt;list()&lt;/code&gt;. Let’s take a look.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;obj &amp;lt;- dummy_select(x:y)
-obj[[1]][1]
-# `:`()&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So operators are actually functions. In fact, in R, everything is an object and we interact with those objects using functions, so this makes sense. Let’s look a bit deeper into this object.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;obj[[1]][[1]]
-# `:`
-obj[[1]][[2]]
-# x
-obj[[1]][[3]]
-# y&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So our function input, &lt;code&gt;x:y&lt;/code&gt;, can be broken down into it’s individual components. We know that the components are made up of the colon function as well as &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt;, but what is the structure of these final two components?&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(obj[[1]][[2]])
-#  symbol x
-str(obj[[1]][[3]])
-#  symbol y&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;They are symbols! So now we can handle these much in the same way as we did with the symbol inputs in the first instance, because remember, just passing &lt;code&gt;x&lt;/code&gt; or &lt;code&gt;y&lt;/code&gt; to our &lt;code&gt;dummy_select()&lt;/code&gt; function returned a symbol.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;str(dummy_select(x, y))
-# List of 2
-#  $ : symbol x
-#  $ : symbol y&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So there you have it! This is how you, as the user, are now able to perform &lt;code&gt;select()&lt;/code&gt; calls with &lt;code&gt;{poorman}&lt;/code&gt; like this:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(poorman, warn.conflicts = FALSE)
-mtcars %&amp;gt;%
-  select(drat, mpg:hp, starts_with(&amp;quot;g&amp;quot;), everything()) %&amp;gt;%
-  head()
-#                   drat  mpg cyl disp  hp gear    wt  qsec vs am carb
-# Mazda RX4         3.90 21.0   6  160 110    4 2.620 16.46  0  1    4
-# Mazda RX4 Wag     3.90 21.0   6  160 110    4 2.875 17.02  0  1    4
-# Datsun 710        3.85 22.8   4  108  93    4 2.320 18.61  1  1    1
-# Hornet 4 Drive    3.08 21.4   6  258 110    3 3.215 19.44  1  0    1
-# Hornet Sportabout 3.15 18.7   8  360 175    3 3.440 17.02  0  0    2
-# Valiant           2.76 18.1   6  225 105    3 3.460 20.22  1  0    1&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
-&lt;h1&gt;Conclusion&lt;/h1&gt;
-&lt;p&gt;This post has taken a look at two separate non-standard evaluation approaches - using nothing but &lt;code&gt;{base}&lt;/code&gt; - deployed within the &lt;code&gt;{poorman}&lt;/code&gt; package. We have seen how to break down &lt;code&gt;language&lt;/code&gt; objects to pick out key pieces of information from them. We also saw how to determine the object types of function inputs and why this is important to consider. In particular, this showed how I was able to transform the &lt;code&gt;select()&lt;/code&gt; function into the omega selectificator function…of doom.&lt;/p&gt;
-&lt;p&gt;As this blog post is quite long, I haven’t gone into any further details of the internals of &lt;code&gt;{poorman}&lt;/code&gt; however if you are interested in taking a closer look at how I handle the different input types, you can see the code on the relevant &lt;code&gt;{poorman}&lt;/code&gt; &lt;a href=&#34;https://github.com/nathaneastwood/poorman/blob/master/R/select_positions.R&#34;&gt;GitHub page&lt;/a&gt;. &lt;code&gt;{poorman}&lt;/code&gt; is still a work in progress but as you can see, it already has a lot of functionality you know and love from &lt;code&gt;{dplyr}&lt;/code&gt; so if you are working on a new project and don’t want to have to deal with dependency management, especially if you are sharing work with colleagues, why not give &lt;code&gt;{poorman}&lt;/code&gt; a try?&lt;/p&gt;
-&lt;p&gt;If you’d like to show your support for &lt;code&gt;{poorman}&lt;/code&gt;, please consider giving the package a &lt;a href=&#34;https://github.com/nathaneastwood/poorman/stargazers&#34;&gt;Star on Github&lt;/a&gt; as it gives me that boost of dopamine needed to continue development.&lt;/p&gt;
 &lt;/div&gt;
 </description>
     </item>
