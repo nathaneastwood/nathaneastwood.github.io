@@ -5,10 +5,181 @@
     <description>Recent content in nse on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Sun, 17 May 2020 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Wed, 01 Jul 2020 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/tags/nse/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>poorman: Version 0.2.1 Release</title>
+      <link>/2020/07/01/poorman-version-0.2.1-release/</link>
+      <pubDate>Wed, 01 Jul 2020 20:12:00 -0500</pubDate>
+      
+      <guid>/2020/07/01/poorman-version-0.2.1-release/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Welcome to my series of blog posts about my data manipulation package, &lt;code&gt;{poorman}&lt;/code&gt;. For those of you that don’t know, &lt;code&gt;{poorman}&lt;/code&gt; is aiming to be a replication of &lt;code&gt;{dplyr}&lt;/code&gt; but using only &lt;code&gt;{base}&lt;/code&gt; R, and therefore be completely dependency free. What’s nice about this series is that if you would rather just use &lt;code&gt;{dplyr}&lt;/code&gt;, then that’s absolutely OK! By highlighting &lt;code&gt;{poorman}&lt;/code&gt; functionality, this series of blog posts simultaneously highlights &lt;code&gt;{dplyr}&lt;/code&gt; functionality too! However I sometimes also describe how I developed the internals of &lt;code&gt;{poorman}&lt;/code&gt;, often highlighting useful &lt;code&gt;{base}&lt;/code&gt; R tips and tricks.&lt;/p&gt;
+&lt;p&gt;Today marks the release of v0.2.1 of &lt;code&gt;{poorman}&lt;/code&gt; and with it a whole host of new functions and features. In today’s blog post we will be taking a look at some of these new features. Given the sheer amount of features this release brings, we won’t be focusing on the internals of any of these functions; the internals will be saved for another post. In stead, we will simply be taking a look at what some of them can do.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;selecting-distinct-rows&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Selecting Distinct Rows&lt;/h1&gt;
+&lt;p&gt;The first function we will take a look at is &lt;code&gt;distinct()&lt;/code&gt;. Let’s say you want to select only the distinct, or unique, rows from your &lt;code&gt;data.frame&lt;/code&gt;, &lt;code&gt;distinct()&lt;/code&gt; will help you do that. Let’s create some fake data; some are duplicated.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;df &amp;lt;- data.frame(
+  id = c(1, 2, 3, 4, 5, 6, 1, 2, 7, 1, 4, 6),
+  age = c(26, 24, 26, 22, 23, 24, 26, 24, 22, 26, 22, 25),
+  score = c(85, 63, 55, 74, 31, 77, 85, 63, 42, 85, 74, 78)
+)
+df
+#    id age score
+# 1   1  26    85
+# 2   2  24    63
+# 3   3  26    55
+# 4   4  22    74
+# 5   5  23    31
+# 6   6  24    77
+# 7   1  26    85
+# 8   2  24    63
+# 9   7  22    42
+# 10  1  26    85
+# 11  4  22    74
+# 12  6  25    78&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now we wish to see the distinct records from this data.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(poorman, warn.conflicts = FALSE)
+df %&amp;gt;% distinct()
+#    id age score
+# 1   1  26    85
+# 2   2  24    63
+# 3   3  26    55
+# 4   4  22    74
+# 5   5  23    31
+# 6   6  24    77
+# 9   7  22    42
+# 12  6  25    78&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So we see that we now only have 8 records out of the original 12 because the duplicates have been removed. We can actually obtain the distinct rows for a particular column, returning just that column.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;df %&amp;gt;% distinct(age)
+#    age
+# 1   26
+# 2   24
+# 4   22
+# 5   23
+# 12  25&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;But if you need the other variables still, you can choose to keep those too.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;df %&amp;gt;% distinct(age, .keep_all = TRUE)
+#    id age score
+# 1   1  26    85
+# 2   2  24    63
+# 4   4  22    74
+# 5   5  23    31
+# 12  6  25    78&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;slicing-data&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Slicing Data&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;{dplyr}&lt;/code&gt; provides a couple of ways to selecting a subset of rows. It has the functions &lt;code&gt;top_n()&lt;/code&gt; and &lt;code&gt;top_frac()&lt;/code&gt; as well as the &lt;code&gt;slice_*()&lt;/code&gt; family of functions. The former functions have now been superseded by the latter and so &lt;code&gt;{poorman}&lt;/code&gt; skipped the implementation of the former. So what exactly do they do? Let’s take a look at some examples using the &lt;code&gt;mtcars&lt;/code&gt; dataset.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;slice_head()&lt;/code&gt; returns the first &lt;code&gt;n&lt;/code&gt; rows (defaults to 1). &lt;code&gt;slice_tail()&lt;/code&gt; returns the &lt;em&gt;last&lt;/em&gt; &lt;code&gt;n&lt;/code&gt; rows (not shown here).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;slice_head(mtcars, n = 3)
+#                mpg cyl disp  hp drat    wt  qsec vs am gear carb
+# Mazda RX4     21.0   6  160 110 3.90 2.620 16.46  0  1    4    4
+# Mazda RX4 Wag 21.0   6  160 110 3.90 2.875 17.02  0  1    4    4
+# Datsun 710    22.8   4  108  93 3.85 2.320 18.61  1  1    4    1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;slice_sample()&lt;/code&gt; randomly selects rows with or without replacement.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;slice_sample(mtcars, n = 3, replace = TRUE)
+#                mpg cyl  disp  hp drat    wt  qsec vs am gear carb
+# Porsche 914-2 26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2
+# Toyota Corona 21.5   4 120.1  97 3.70 2.465 20.01  1  0    3    1
+# Merc 280C     17.8   6 167.6 123 3.92 3.440 18.90  1  0    4    4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;slice_min()&lt;/code&gt; and &lt;code&gt;slice_max()&lt;/code&gt; select rows with highest or lowest values of a variable.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% slice_min(mpg, n = 3)
+#                      mpg cyl disp  hp drat    wt  qsec vs am gear carb
+# Cadillac Fleetwood  10.4   8  472 205 2.93 5.250 17.98  0  0    3    4
+# Lincoln Continental 10.4   8  460 215 3.00 5.424 17.82  0  0    3    4
+# Camaro Z28          13.3   8  350 245 3.73 3.840 15.41  0  0    3    4&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;selecting-with-predicates&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Selecting With Predicates&lt;/h1&gt;
+&lt;p&gt;It is now possible to select columns in your &lt;code&gt;data.frame&lt;/code&gt; which match a predicate such as &lt;code&gt;is.numeric()&lt;/code&gt;. &lt;code&gt;where()&lt;/code&gt; takes a function and returns all variables for which the function returns &lt;code&gt;TRUE&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;df &amp;lt;- data.frame(
+  col1 = c(1, 2, 3),
+  col2 = c(&amp;quot;x&amp;quot;, &amp;quot;y&amp;quot;, &amp;quot;z&amp;quot;),
+  col3 = c(TRUE, FALSE, TRUE)
+)
+df %&amp;gt;% select(where(is.numeric))
+#   col1
+# 1    1
+# 2    2
+# 3    3&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;working-with-na-values&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Working With NA Values&lt;/h1&gt;
+&lt;div id=&#34;finding-the-first-non-missing-element&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Finding the First Non-Missing Element&lt;/h2&gt;
+&lt;p&gt;Given a set of vectors, the &lt;code&gt;coalesce()&lt;/code&gt; function finds the first non-missing value at each position.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;# Use a single value to replace all missing values
+x &amp;lt;- sample(c(1:5, NA, NA, NA))
+coalesce(x, 0L)
+# [1] 4 0 5 0 1 2 0 3
+
+# Or match together a complete vector from missing pieces
+y &amp;lt;- c(1, 2, NA, NA, 5)
+z &amp;lt;- c(NA, NA, 3, 4, 5)
+coalesce(y, z)
+# [1] 1 2 3 4 5&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;convert-values-to-na&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Convert Values To NA&lt;/h2&gt;
+&lt;p&gt;We can convert values in a vector &lt;code&gt;x&lt;/code&gt; if they match values in a second vector &lt;code&gt;y&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;na_if(1:5, 5:1)
+# [1]  1  2 NA  4  5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is particularly useful in a &lt;code&gt;data.frame&lt;/code&gt; if you need to replace a particular value.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;df &amp;lt;- data.frame(a = c(&amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;c&amp;quot;, &amp;quot;BAD_VALUE&amp;quot;))
+df %&amp;gt;% mutate(a = na_if(a, &amp;quot;BAD_VALUE&amp;quot;))
+#      a
+# 1    a
+# 2    b
+# 3    c
+# 4 &amp;lt;NA&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;replacing-na-values&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Replacing NA Values&lt;/h2&gt;
+&lt;p&gt;Within a &lt;code&gt;data.frame&lt;/code&gt; we often have missing values in multiple columns. We sometimes wish to replace these values which is where &lt;code&gt;replace_na()&lt;/code&gt; comes in. &lt;code&gt;replace_na()&lt;/code&gt; is actually a function from the &lt;code&gt;{tidyr}&lt;/code&gt; package but I decided to add it to &lt;code&gt;{poorman}&lt;/code&gt; as it is extremely useful. Let’s take a look.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;df &amp;lt;- data.frame(x = c(1, 2, NA), y = c(&amp;quot;a&amp;quot;, NA, &amp;quot;b&amp;quot;))
+df %&amp;gt;% replace_na(list(x = 0, y = &amp;quot;unknown&amp;quot;))
+#   x       y
+# 1 1       a
+# 2 2 unknown
+# 3 0       b&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;recoding-values&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Recoding Values&lt;/h1&gt;
+&lt;p&gt;If we wish to replace values within a vector or a column of a &lt;code&gt;data.frame&lt;/code&gt;, we can use &lt;code&gt;recode()&lt;/code&gt;. This is a vectorised version of &lt;code&gt;base::switch()&lt;/code&gt;: you can replace numeric values based on their position or their name, and character or factor values only by their name.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;char_vec &amp;lt;- sample(c(&amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;c&amp;quot;), 10, replace = TRUE)
+recode(char_vec, a = &amp;quot;Apple&amp;quot;)
+#  [1] &amp;quot;b&amp;quot;     &amp;quot;c&amp;quot;     &amp;quot;b&amp;quot;     &amp;quot;c&amp;quot;     &amp;quot;Apple&amp;quot; &amp;quot;Apple&amp;quot; &amp;quot;Apple&amp;quot; &amp;quot;c&amp;quot;     &amp;quot;Apple&amp;quot; &amp;quot;b&amp;quot;
+recode(char_vec, a = &amp;quot;Apple&amp;quot;, b = &amp;quot;Banana&amp;quot;)
+#  [1] &amp;quot;Banana&amp;quot; &amp;quot;c&amp;quot;      &amp;quot;Banana&amp;quot; &amp;quot;c&amp;quot;      &amp;quot;Apple&amp;quot;  &amp;quot;Apple&amp;quot;  &amp;quot;Apple&amp;quot;  &amp;quot;c&amp;quot;      &amp;quot;Apple&amp;quot; 
+# [10] &amp;quot;Banana&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;group-details&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Group Details&lt;/h1&gt;
+&lt;p&gt;The final group (no pun intended) of features are focussed solely on grouped data. Given how many there are, I am not going to go into detail and instead I provide a brief overview here for the reader. The plan is to detail these functions in a separate blog post since a lot of work went on under the hood that may be interesting to discuss.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Functions for splitting &lt;code&gt;data.frame&lt;/code&gt;s: &lt;code&gt;group_split()&lt;/code&gt;, &lt;code&gt;group_keys()&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Extract grouping metadata: &lt;code&gt;group_data()&lt;/code&gt;, &lt;code&gt;group_indices()&lt;/code&gt;, &lt;code&gt;group_vars()&lt;/code&gt;, &lt;code&gt;group_rows()&lt;/code&gt;, &lt;code&gt;group_size()&lt;/code&gt;, &lt;code&gt;n_groups()&lt;/code&gt;, &lt;code&gt;groups()&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Extract information about the &lt;em&gt;current&lt;/em&gt; group: &lt;code&gt;cur_data()&lt;/code&gt;, &lt;code&gt;cur_group()&lt;/code&gt;, &lt;code&gt;cur_group_id()&lt;/code&gt;, &lt;code&gt;cur_group_rows()&lt;/code&gt;, &lt;code&gt;cur_column()&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;You made it this far, great! I won’t keep you much longer. This post has demonstrated some of the capabilities of the &lt;code&gt;{poorman}&lt;/code&gt; (and therefore &lt;code&gt;{dplyr}&lt;/code&gt;) package. The v0.2.1 release actually includes a sleuth of other features and functions so be sure to check out the &lt;a href=&#34;https://github.com/nathaneastwood/poorman/releases/tag/v0.2.1&#34;&gt;release page&lt;/a&gt; for a full list.&lt;/p&gt;
+&lt;p&gt;As this blog post is quite long, I haven’t gone into any further details of the internals of &lt;code&gt;{poorman}&lt;/code&gt; however if you are interested in taking a closer look at how I handle the different input types, you can see the code on the relevant &lt;code&gt;{poorman}&lt;/code&gt; &lt;a href=&#34;https://github.com/nathaneastwood/poorman&#34;&gt;GitHub page&lt;/a&gt;. &lt;code&gt;{poorman}&lt;/code&gt; is still a work in progress but as you can see, it already has a lot of functionality you know and love from &lt;code&gt;{dplyr}&lt;/code&gt; so if you are working on a new project and don’t want to have to deal with dependency management, especially if you are sharing work with colleagues, why not give &lt;code&gt;{poorman}&lt;/code&gt; a try?&lt;/p&gt;
+&lt;p&gt;If you’d like to show your support for &lt;code&gt;{poorman}&lt;/code&gt;, please consider giving the package a &lt;a href=&#34;https://github.com/nathaneastwood/poorman/stargazers&#34;&gt;Star on Github&lt;/a&gt; as it gives me that boost of dopamine needed to continue development.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>poorman: The Selectificator 2000!</title>
