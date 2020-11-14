@@ -5,10 +5,146 @@
     <description>Recent content in R on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Wed, 01 Jul 2020 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Sat, 14 Nov 2020 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/categories/r/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>poorman: Versions 0.2.2 and 0.2.3 Releases</title>
+      <link>/2020/11/14/poorman-versions-0.2.2-and-0.2.3-releases/</link>
+      <pubDate>Sat, 14 Nov 2020 20:12:00 -0500</pubDate>
+      
+      <guid>/2020/11/14/poorman-versions-0.2.2-and-0.2.3-releases/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Welcome to my series of blog posts about my data manipulation package, {poorman}. For those of you that don’t know, {poorman} is aiming to be a replication of {dplyr} but using only {base} R, and therefore be completely dependency free. What’s nice about this series is that if you would rather just use {dplyr}, then that’s absolutely OK! By highlighting {poorman} functionality, this series of blog posts simultaneously highlights {dplyr} functionality too! However I sometimes also describe how I developed the internals of {poorman}, often highlighting useful {base} R tips and tricks.&lt;/p&gt;
+&lt;p&gt;Since my last blog post about {poorman}, versions 0.2.2 and 0.2.3 have been released, bringing with them a whole host of new functions and features. In today’s blog post we will be taking a look at some of these new features. Given the sheer amount of features this release brings, we won’t be focusing on the internals of any of these functions. Instead, we will simply be taking a look at what some of them can do.&lt;/p&gt;
+&lt;div id=&#34;across&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;&lt;code&gt;across()&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;One of the newer features in {dplyr}, &lt;code&gt;across()&lt;/code&gt; is intended to eventually replace the scoped variants (&lt;code&gt;_if&lt;/code&gt;, &lt;code&gt;_at&lt;/code&gt;, &lt;code&gt;_all&lt;/code&gt;) of the “single table” verb functions which have now been superseded. These functions will supposedly remain within {dplyr} for “several years” still, giving developers plenty of time to update their code.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;across()&lt;/code&gt; makes it easy to apply the same transformation to multiple columns, allowing you to use &lt;code&gt;poor-select&lt;/code&gt; (or &lt;code&gt;tidy-select&lt;/code&gt;) semantics inside of &lt;code&gt;summarise()&lt;/code&gt; and &lt;code&gt;mutate()&lt;/code&gt;. Let’s take a look at the function in action.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(poorman, warn.conflicts = FALSE)
+iris %&amp;gt;%
+  group_by(Species) %&amp;gt;%
+  summarise(across(.cols = starts_with(&amp;quot;Sepal&amp;quot;), .fn = mean))
+#      Species Sepal.Length Sepal.Width
+# 1     setosa        5.006       3.428
+# 2 versicolor        5.936       2.770
+# 3  virginica        6.588       2.974&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In the above code chunk, we take the iris dataset and group it by the &lt;code&gt;Species&lt;/code&gt; column; then we look to summarise across all columns which start with the string &lt;code&gt;&#34;Sepal&#34;&lt;/code&gt; (&lt;code&gt;Sepal.Length&lt;/code&gt; and &lt;code&gt;Sepal.Width&lt;/code&gt;) by taking the mean of those columns within each &lt;code&gt;Species&lt;/code&gt; group. Let’s take a look at a more complex example.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;iris %&amp;gt;%
+  group_by(Species) %&amp;gt;%
+  summarise(across(.cols = contains(&amp;quot;Width&amp;quot;), .fn = list(mean, sd)))
+#      Species Sepal.Width_1 Sepal.Width_2 Petal.Width_1 Petal.Width_2
+# 1     setosa         3.428     0.3790644         0.246     0.1053856
+# 2 versicolor         2.770     0.3137983         1.326     0.1977527
+# 3  virginica         2.974     0.3224966         2.026     0.2746501&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So here, we are saying give me the mean and standard devitaion across all columns containing the string &lt;code&gt;&#34;Width&#34;&lt;/code&gt; for each &lt;code&gt;Species&lt;/code&gt; of iris flower. Notice how the output is named, the function will give the columns numbers to represent the functional output, i.e. here &lt;code&gt;_1&lt;/code&gt; represents the mean and &lt;code&gt;_2&lt;/code&gt; represents the standard deviation. You can control the names yourself but providing them to the &lt;code&gt;.names&lt;/code&gt; argument.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;iris %&amp;gt;%
+  group_by(Species) %&amp;gt;%
+  summarise(across(
+    .cols = contains(&amp;quot;Width&amp;quot;),
+    .fn = list(mean, sd),
+    .names = c(
+      &amp;quot;sepal_width_mean&amp;quot;, &amp;quot;sepal_width_sd&amp;quot;, &amp;quot;petal_width_mean&amp;quot;, &amp;quot;petal_width_sd&amp;quot;
+    )
+  ))
+#      Species sepal_width_mean sepal_width_sd petal_width_mean petal_width_sd
+# 1     setosa            3.428      0.3790644            0.246      0.1053856
+# 2 versicolor            2.770      0.3137983            1.326      0.1977527
+# 3  virginica            2.974      0.3224966            2.026      0.2746501&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is slightly different to how {dplyr} works since it imports {glue}, but remember, {poorman} aims to be dependency free. This functionality will be expanded upon in future releases of {poorman}.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;case_when&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;&lt;code&gt;case_when()&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;This function allows you to vectorise multiple &lt;code&gt;if_else()&lt;/code&gt; statements. It is an R equivalent of the SQL &lt;code&gt;CASE WHEN&lt;/code&gt; statement. If no cases match, &lt;code&gt;NA&lt;/code&gt; is returned. The syntax for the function is a sequence of two-sided formulas. The left hand side determines which values match the particular case whereas the right hand side provides the replacement value.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;x &amp;lt;- 1:50
+case_when(
+  x %% 35 == 0 ~ &amp;quot;fizz buzz&amp;quot;,
+  x %% 5 == 0 ~ &amp;quot;fizz&amp;quot;,
+  x %% 7 == 0 ~ &amp;quot;buzz&amp;quot;,
+  TRUE ~ as.character(x)
+)
+#  [1] &amp;quot;1&amp;quot;         &amp;quot;2&amp;quot;         &amp;quot;3&amp;quot;         &amp;quot;4&amp;quot;         &amp;quot;fizz&amp;quot;      &amp;quot;6&amp;quot;         &amp;quot;buzz&amp;quot;     
+#  [8] &amp;quot;8&amp;quot;         &amp;quot;9&amp;quot;         &amp;quot;fizz&amp;quot;      &amp;quot;11&amp;quot;        &amp;quot;12&amp;quot;        &amp;quot;13&amp;quot;        &amp;quot;buzz&amp;quot;     
+# [15] &amp;quot;fizz&amp;quot;      &amp;quot;16&amp;quot;        &amp;quot;17&amp;quot;        &amp;quot;18&amp;quot;        &amp;quot;19&amp;quot;        &amp;quot;fizz&amp;quot;      &amp;quot;buzz&amp;quot;     
+# [22] &amp;quot;22&amp;quot;        &amp;quot;23&amp;quot;        &amp;quot;24&amp;quot;        &amp;quot;fizz&amp;quot;      &amp;quot;26&amp;quot;        &amp;quot;27&amp;quot;        &amp;quot;buzz&amp;quot;     
+# [29] &amp;quot;29&amp;quot;        &amp;quot;fizz&amp;quot;      &amp;quot;31&amp;quot;        &amp;quot;32&amp;quot;        &amp;quot;33&amp;quot;        &amp;quot;34&amp;quot;        &amp;quot;fizz buzz&amp;quot;
+# [36] &amp;quot;36&amp;quot;        &amp;quot;37&amp;quot;        &amp;quot;38&amp;quot;        &amp;quot;39&amp;quot;        &amp;quot;fizz&amp;quot;      &amp;quot;41&amp;quot;        &amp;quot;buzz&amp;quot;     
+# [43] &amp;quot;43&amp;quot;        &amp;quot;44&amp;quot;        &amp;quot;fizz&amp;quot;      &amp;quot;46&amp;quot;        &amp;quot;47&amp;quot;        &amp;quot;48&amp;quot;        &amp;quot;buzz&amp;quot;     
+# [50] &amp;quot;fizz&amp;quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Like an if statement, the arguments are evaluated in order, so you must proceed from the most specific to the most general. &lt;code&gt;case_when()&lt;/code&gt; is particularly useful inside &lt;code&gt;mutate()&lt;/code&gt; when you want to create a new variable that relies on a complex combination of existing variables.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;%
+  mutate(efficient = case_when(mpg &amp;gt; 25 ~ TRUE, TRUE ~ FALSE))
+#                      mpg cyl  disp  hp drat    wt  qsec vs am gear carb efficient
+# Mazda RX4           21.0   6 160.0 110 3.90 2.620 16.46  0  1    4    4     FALSE
+# Mazda RX4 Wag       21.0   6 160.0 110 3.90 2.875 17.02  0  1    4    4     FALSE
+# Datsun 710          22.8   4 108.0  93 3.85 2.320 18.61  1  1    4    1     FALSE
+# Hornet 4 Drive      21.4   6 258.0 110 3.08 3.215 19.44  1  0    3    1     FALSE
+# Hornet Sportabout   18.7   8 360.0 175 3.15 3.440 17.02  0  0    3    2     FALSE
+# Valiant             18.1   6 225.0 105 2.76 3.460 20.22  1  0    3    1     FALSE
+# Duster 360          14.3   8 360.0 245 3.21 3.570 15.84  0  0    3    4     FALSE
+# Merc 240D           24.4   4 146.7  62 3.69 3.190 20.00  1  0    4    2     FALSE
+# Merc 230            22.8   4 140.8  95 3.92 3.150 22.90  1  0    4    2     FALSE
+# Merc 280            19.2   6 167.6 123 3.92 3.440 18.30  1  0    4    4     FALSE
+# Merc 280C           17.8   6 167.6 123 3.92 3.440 18.90  1  0    4    4     FALSE
+# Merc 450SE          16.4   8 275.8 180 3.07 4.070 17.40  0  0    3    3     FALSE
+# Merc 450SL          17.3   8 275.8 180 3.07 3.730 17.60  0  0    3    3     FALSE
+# Merc 450SLC         15.2   8 275.8 180 3.07 3.780 18.00  0  0    3    3     FALSE
+# Cadillac Fleetwood  10.4   8 472.0 205 2.93 5.250 17.98  0  0    3    4     FALSE
+# Lincoln Continental 10.4   8 460.0 215 3.00 5.424 17.82  0  0    3    4     FALSE
+# Chrysler Imperial   14.7   8 440.0 230 3.23 5.345 17.42  0  0    3    4     FALSE
+# Fiat 128            32.4   4  78.7  66 4.08 2.200 19.47  1  1    4    1      TRUE
+# Honda Civic         30.4   4  75.7  52 4.93 1.615 18.52  1  1    4    2      TRUE
+# Toyota Corolla      33.9   4  71.1  65 4.22 1.835 19.90  1  1    4    1      TRUE
+# Toyota Corona       21.5   4 120.1  97 3.70 2.465 20.01  1  0    3    1     FALSE
+# Dodge Challenger    15.5   8 318.0 150 2.76 3.520 16.87  0  0    3    2     FALSE
+# AMC Javelin         15.2   8 304.0 150 3.15 3.435 17.30  0  0    3    2     FALSE
+# Camaro Z28          13.3   8 350.0 245 3.73 3.840 15.41  0  0    3    4     FALSE
+# Pontiac Firebird    19.2   8 400.0 175 3.08 3.845 17.05  0  0    3    2     FALSE
+# Fiat X1-9           27.3   4  79.0  66 4.08 1.935 18.90  1  1    4    1      TRUE
+# Porsche 914-2       26.0   4 120.3  91 4.43 2.140 16.70  0  1    5    2      TRUE
+# Lotus Europa        30.4   4  95.1 113 3.77 1.513 16.90  1  1    5    2      TRUE
+# Ford Pantera L      15.8   8 351.0 264 4.22 3.170 14.50  0  1    5    4     FALSE
+# Ferrari Dino        19.7   6 145.0 175 3.62 2.770 15.50  0  1    5    6     FALSE
+# Maserati Bora       15.0   8 301.0 335 3.54 3.570 14.60  0  1    5    8     FALSE
+# Volvo 142E          21.4   4 121.0 109 4.11 2.780 18.60  1  1    4    2     FALSE&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;rename_with&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;&lt;code&gt;rename_with()&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;rename_with()&lt;/code&gt; acts like &lt;code&gt;rename()&lt;/code&gt;, only it allows you to rename columns with a function. In the below example, we rename the columns of &lt;code&gt;iris&lt;/code&gt; to be upper case.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;rename_with(iris, toupper) %&amp;gt;% head()
+#   SEPAL.LENGTH SEPAL.WIDTH PETAL.LENGTH PETAL.WIDTH SPECIES
+# 1          5.1         3.5          1.4         0.2  setosa
+# 2          4.9         3.0          1.4         0.2  setosa
+# 3          4.7         3.2          1.3         0.2  setosa
+# 4          4.6         3.1          1.5         0.2  setosa
+# 5          5.0         3.6          1.4         0.2  setosa
+# 6          5.4         3.9          1.7         0.4  setosa&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;However we can have more control over which columns we rename by making use of the &lt;code&gt;.cols&lt;/code&gt; parameter and &lt;code&gt;poor-select&lt;/code&gt; selection semantics.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;rename_with(iris, toupper, contains(&amp;quot;Petal&amp;quot;)) %&amp;gt;% head()
+#   Sepal.Length Sepal.Width PETAL.LENGTH PETAL.WIDTH Species
+# 1          5.1         3.5          1.4         0.2  setosa
+# 2          4.9         3.0          1.4         0.2  setosa
+# 3          4.7         3.2          1.3         0.2  setosa
+# 4          4.6         3.1          1.5         0.2  setosa
+# 5          5.0         3.6          1.4         0.2  setosa
+# 6          5.4         3.9          1.7         0.4  setosa&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;This post has demonstrated some of the capabilities of the {poorman} (and therefore {dplyr}) package. The v0.2.2 and v0.2.3 releases actually includes plenty more features and functions so be sure to check out the &lt;a href=&#34;https://github.com/nathaneastwood/poorman/releases&#34;&gt;release page&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;If you are interested in taking a closer look at how have coded these functions, you can see the code on the relevant {poorman} &lt;a href=&#34;https://github.com/nathaneastwood/poorman&#34;&gt;GitHub page&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;If you’d like to show your support for {poorman}, please consider giving the package a &lt;a href=&#34;https://github.com/nathaneastwood/poorman/stargazers&#34;&gt;Star on Github&lt;/a&gt; as it gives me that boost of dopamine needed to continue development.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>poorman: Version 0.2.1 Release</title>
