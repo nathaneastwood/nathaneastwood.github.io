@@ -5,10 +5,221 @@
     <description>Recent content in Posts on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Sat, 14 Nov 2020 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Thu, 18 Feb 2021 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Using Functions As An Input To Functions With {dbplyr}</title>
+      <link>/2021/02/18/using-functions-as-an-input-to-functions-with-dbplyr/</link>
+      <pubDate>Thu, 18 Feb 2021 20:12:00 -0500</pubDate>
+      
+      <guid>/2021/02/18/using-functions-as-an-input-to-functions-with-dbplyr/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;the-problem&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;The Problem&lt;/h1&gt;
+&lt;p&gt;I wish to write a function that can mutate a column of my data using a function which is passed as an input. For example, I want to write a function which can modify an existing &lt;code&gt;tbl_spark&lt;/code&gt; using &lt;code&gt;dplyr::mutate()&lt;/code&gt; by adding a column that is the &lt;code&gt;mean()&lt;/code&gt; of a column. To do this, we will see that we require a different solution depending on whether we are working with a &lt;code&gt;data.frame&lt;/code&gt; or a &lt;code&gt;tbl_spark&lt;/code&gt;. For this reason, I am going to define an S3 generic, &lt;code&gt;mutate_with()&lt;/code&gt;, for which I am going to define two methods, one for &lt;code&gt;data.frame&lt;/code&gt;s and one for &lt;code&gt;tbl_spark&lt;/code&gt;s.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;solution-for-data.frames&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Solution For &lt;code&gt;data.frame&lt;/code&gt;s&lt;/h1&gt;
+&lt;p&gt;First of all, let us define our generic. If you are not familiar with S3 generics and how they work, I would recommend checking out the S3 section in the freely available &lt;a href=&#34;https://adv-r.hadley.nz/s3.html&#34;&gt;Advanced R book&lt;/a&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mutate_with &amp;lt;- function(data, fn, col_in, col_out = &amp;quot;output&amp;quot;) {
+  UseMethod(generic = &amp;quot;mutate_with&amp;quot;, object = data)
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now that we have our generic in place, we can add our first method for &lt;code&gt;data.frame&lt;/code&gt;s. This is actually relatively simple as seen below.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mutate_with.data.frame &amp;lt;- function(data, fn, col_in, col_out = &amp;quot;output&amp;quot;) {
+  dplyr::mutate(.data = data, !!col_out := fn(!!rlang::sym(col_in)))
+}
+head(
+  mutate_with(data = mtcars, fn = mean, col_in = &amp;quot;mpg&amp;quot;, col_out = &amp;quot;mean_mpg&amp;quot;)
+)
+#    mpg cyl disp  hp drat    wt  qsec vs am gear carb mean_mpg
+# 1 21.0   6  160 110 3.90 2.620 16.46  0  1    4    4 20.09062
+# 2 21.0   6  160 110 3.90 2.875 17.02  0  1    4    4 20.09062
+# 3 22.8   4  108  93 3.85 2.320 18.61  1  1    4    1 20.09062
+# 4 21.4   6  258 110 3.08 3.215 19.44  1  0    3    1 20.09062
+# 5 18.7   8  360 175 3.15 3.440 17.02  0  0    3    2 20.09062
+# 6 18.1   6  225 105 2.76 3.460 20.22  1  0    3    1 20.09062&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This works because what we are essentially doing is assigning the function &lt;code&gt;mean()&lt;/code&gt; to the object &lt;code&gt;fn&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mean
+# function (x, ...) 
+# UseMethod(&amp;quot;mean&amp;quot;)
+# &amp;lt;bytecode: 0x7fd5f69a3590&amp;gt;
+# &amp;lt;environment: namespace:base&amp;gt;
+fn &amp;lt;- mean
+fn
+# function (x, ...) 
+# UseMethod(&amp;quot;mean&amp;quot;)
+# &amp;lt;bytecode: 0x7fd5f69a3590&amp;gt;
+# &amp;lt;environment: namespace:base&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This means that we can call &lt;code&gt;fn()&lt;/code&gt; as if we were calling &lt;code&gt;mean()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;fn(rnorm(100))
+# [1] 0.01109211&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;solution-for-tbl_sparks&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Solution For &lt;code&gt;tbl_spark&lt;/code&gt;s&lt;/h1&gt;
+&lt;p&gt;Unfortunately the above solution does not work for &lt;code&gt;tbl_spark&lt;/code&gt;s. To show this, I will first create a Spark connection and upload the &lt;code&gt;mtcars&lt;/code&gt; data.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;sc &amp;lt;- sparklyr::spark_connect(master = &amp;quot;local&amp;quot;)
+mtcars_spark &amp;lt;- dplyr::copy_to(sc, mtcars, &amp;quot;mtcars&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now let’s try calling our function with the &lt;code&gt;mtcars_spark&lt;/code&gt; object.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mutate_with.tbl_spark &amp;lt;- mutate_with.data.frame
+mutate_with(
+  data = mtcars_spark, fn = mean, col_in = &amp;quot;mpg&amp;quot;, col_out = &amp;quot;mean_mpg&amp;quot;
+)
+# Error: org.apache.spark.sql.AnalysisException: Undefined function: &amp;#39;fn&amp;#39;.
+# This function is neither a registered temporary function nor a permanent
+# function registered in the database &amp;#39;default&amp;#39;.; line 1 pos 85
+# ... (additional output has been removed)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So we get an error here telling us that we have passed an underfined function, &lt;code&gt;fn&lt;/code&gt;. This is because in the background, the package {dbplyr} is attempting to translate our code to Spark SQL code to be executed by Spark. To do this, {dbplyr} parses our {dplyr} code, for which there are two parts.&lt;/p&gt;
+&lt;p&gt;Firstly there is the translation of {dplyr} verbs, e.g. &lt;code&gt;select()&lt;/code&gt;, &lt;code&gt;filter()&lt;/code&gt;, &lt;code&gt;arrange()&lt;/code&gt;, etc. form the basic structure of a SQL query, &lt;code&gt;SELECT&lt;/code&gt;, &lt;code&gt;WHERE&lt;/code&gt;, &lt;code&gt;ORDER BY&lt;/code&gt;, etc.&lt;/p&gt;
+&lt;p&gt;Secondly there is the translation of the expressions within those verbs. This is the part that is interesting to us for this blog post. First of all we have “known functions” where {dbplyr} takes the functionality that you pass to it and tries to convert it to a SQL equivalent. As a simple example, {dbplyr} will convert the &lt;code&gt;mean()&lt;/code&gt; function to &lt;code&gt;AVG&lt;/code&gt;. However {dbplyr} cannot always produce a perfect translation because there are functions which exist in R that do not exist in the varying flavours of SQL, we will refer to these as “unknown functions”.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;As a note, there is even functionality in both that cannot be translated, for example the &lt;code&gt;trim&lt;/code&gt; parameter of the &lt;code&gt;mean()&lt;/code&gt; function is not available in SQL.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;What {dbplyr} does with these unknown functions, therefore, is to leave them “as-is”. This means that database functions that are not covered by {dbplyr} can be used directly. For example in Spark we can access and use &lt;a href=&#34;https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF&#34;&gt;Hive UDFs&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;So what does this all mean? And why does this mean that our function failed? Well it’s because when {dbplyr} parses our code, it “sees” the &lt;code&gt;fn&lt;/code&gt; parameter and it treats it “as-is” since there is no direct conversion to a SQL function defined in {dbplyr}. Equally, there is no function in Spark SQL called &lt;code&gt;fn()&lt;/code&gt; which is why, when our converted code is sent to Spark, we see the failure. We can see this in action by rendering the translated output that {dbplyr} gives us.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;out &amp;lt;- mutate_with(
+  data = mtcars_spark, fn = mean, col_in = &amp;quot;mpg&amp;quot;, col_out = &amp;quot;mean_mpg&amp;quot;
+)
+dbplyr::sql_render(out)&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;SQL&amp;gt; SELECT `mpg`, `cyl`, `disp`, `hp`, `drat`, `wt`, `qsec`, `vs`, `am`,
+`gear`, `carb`, fn(`mpg`) AS `mean_mpg`
+FROM `mtcars`&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This means that we must pass the actual function &lt;em&gt;name&lt;/em&gt;, i.e. &lt;code&gt;mean&lt;/code&gt;, in place of &lt;code&gt;fn&lt;/code&gt; at the time that {dbplyr} “sees” our code and attempts to parse and translate it into SQL. For this, we need to use non-standard evaluation semantics.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mutate_with.tbl_spark &amp;lt;- function(data, fn, col_in, col_out = &amp;quot;output&amp;quot;) {
+  fn &amp;lt;- rlang::enquo(fn)
+  dplyr::mutate(
+    .data = data, !!col_out := rlang::call2(.fn = !!fn, rlang::sym(col_in))
+  )
+}
+mutate_with(
+  data = mtcars_spark, fn = mean, col_in = &amp;quot;mpg&amp;quot;, col_out = &amp;quot;mean_mpg&amp;quot;
+)
+# # Source: spark&amp;lt;?&amp;gt; [?? x 12]
+#      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb mean_mpg
+#    &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;    &amp;lt;dbl&amp;gt;
+#  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4     20.1
+#  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4     20.1
+#  3  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1     20.1
+#  4  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1     20.1
+#  5  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2     20.1
+#  6  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1     20.1
+#  7  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4     20.1
+#  8  24.4     4  147.    62  3.69  3.19  20       1     0     4     2     20.1
+#  9  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2     20.1
+# 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4     20.1
+# # … with more rows&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So why does this work? Well what we are doing here is “quoting” the parameter &lt;code&gt;fn&lt;/code&gt; which is the same as saying preventing the evaluation of &lt;code&gt;fn&lt;/code&gt;. &lt;code&gt;rlang::enquo()&lt;/code&gt; is used to quote function arguments such as &lt;code&gt;fn&lt;/code&gt; and returns what is known as a “quosure”. A “quosure” is an object containing both the expression and the environment which that expression comes from. We can “unquote” the “quosure”, &lt;code&gt;fn&lt;/code&gt;, with the &lt;code&gt;!!&lt;/code&gt; or “bang-bang” operator.&lt;/p&gt;
+&lt;p&gt;In English this means that we can evaluate and replace inline the captured expression. So what &lt;code&gt;!!fn&lt;/code&gt; actually reads as is &lt;code&gt;mean&lt;/code&gt;. The &lt;code&gt;!!fn&lt;/code&gt; works because it is evaluated &lt;em&gt;before&lt;/em&gt; any R code is evaluated. In other words, before the code is parsed by {dbplyr}, {rlang} is able to evaluate &lt;code&gt;!!fn&lt;/code&gt;, replacing it with &lt;code&gt;mean&lt;/code&gt;. You will sometimes see this being referred to as partial evaluation.&lt;/p&gt;
+&lt;p&gt;That’s a lot of information in two short paragraphs and I’d highly recommend reading the help file (&lt;code&gt;?rlang::quosure&lt;/code&gt;) if you’d like to know more. Another great resource for learning more about {rlang} is Brodie Gaslam’s &lt;a href=&#34;https://www.brodieg.com/2020/08/11/quosures/&#34;&gt;On Quosures&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;We use &lt;code&gt;rlang::call2()&lt;/code&gt; to build a quoted function call which can be interpreted by {dbplyr}. What this all boils down to is that &lt;code&gt;rlang::call2(.fn = !!fn, rlang::sym(col_in))&lt;/code&gt; is used to create the following, unevaluated, expression.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;mean(mpg)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So the execution order is as follows:&lt;/p&gt;
+&lt;ol style=&#34;list-style-type: decimal&#34;&gt;
+&lt;li&gt;&lt;code&gt;!!fn&lt;/code&gt; is translated to &lt;code&gt;mean&lt;/code&gt;, inline.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;rlang::call2()&lt;/code&gt; is evaluated, giving &lt;code&gt;mean(mpg)&lt;/code&gt; (note that we convert our string input to a symbol using &lt;code&gt;rlang::sym(col_in)&lt;/code&gt;).&lt;/li&gt;
+&lt;li&gt;{dbplyr} translates the code to SQL code and sends it to Spark to be executed.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Note that we can achieve a similar result using &lt;code&gt;base::bquote()&lt;/code&gt; and &lt;code&gt;base::eval()&lt;/code&gt;. &lt;code&gt;bquote()&lt;/code&gt; is base R’s equivalent of partial evaluation which creates a quoted expression that we can then evaulate with &lt;code&gt;eval()&lt;/code&gt;. The difference in syntax is that the parts to be partially evaluated are surrounded by &lt;code&gt;.()&lt;/code&gt; instead of &lt;code&gt;!!&lt;/code&gt; as in {rlang}.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mutate_with_bquote &amp;lt;- function(data, fn, col_in, col_out = &amp;quot;output&amp;quot;) {
+  eval(bquote(
+    dplyr::mutate(.data = data, !!col_out := .(fn)(rlang::sym(col_in)))
+  ))
+}
+mutate_with_bquote(
+  data = mtcars_spark, fn = mean, col_in = &amp;quot;mpg&amp;quot;, col_out = &amp;quot;mean_mpg&amp;quot;
+)
+# # Source: spark&amp;lt;?&amp;gt; [?? x 12]
+#      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb mean_mpg
+#    &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;    &amp;lt;dbl&amp;gt;
+#  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4     20.1
+#  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4     20.1
+#  3  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1     20.1
+#  4  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1     20.1
+#  5  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2     20.1
+#  6  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1     20.1
+#  7  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4     20.1
+#  8  24.4     4  147.    62  3.69  3.19  20       1     0     4     2     20.1
+#  9  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2     20.1
+# 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4     20.1
+# # … with more rows&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;quoted-function-name&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Quoted Function Name&lt;/h1&gt;
+&lt;p&gt;The above could have all been made much simpler by passing a quoted function name, however you may well have reasons you don’t wish to do this. For completeness, I present an example of how this can be done.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mutate_with.tbl_spark &amp;lt;- function(data, fn, col_in, col_out = &amp;quot;output&amp;quot;) {
+  condition &amp;lt;- paste0(fn, &amp;quot;(&amp;quot;, col_in, &amp;quot;)&amp;quot;)
+  dplyr::mutate(.data = data, !!col_out := !!rlang::parse_expr(condition))
+}
+mutate_with(
+  data = mtcars_spark, fn = &amp;quot;mean&amp;quot;, col_in = &amp;quot;mpg&amp;quot;, col_out = &amp;quot;mean_mpg&amp;quot;
+)
+# # Source: spark&amp;lt;?&amp;gt; [?? x 12]
+#      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb mean_mpg
+#    &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;    &amp;lt;dbl&amp;gt;
+#  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4     20.1
+#  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4     20.1
+#  3  22.8     4  108     93  3.85  2.32  18.6     1     1     4     1     20.1
+#  4  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1     20.1
+#  5  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2     20.1
+#  6  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1     20.1
+#  7  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4     20.1
+#  8  24.4     4  147.    62  3.69  3.19  20       1     0     4     2     20.1
+#  9  22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2     20.1
+# 10  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4     20.1
+# # … with more rows&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So we build the expression as a string which we then parse ourselves using &lt;code&gt;rlang::parse_expr()&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;It is also worth noting that this version works with regular &lt;code&gt;data.frame&lt;/code&gt;s too.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mutate_with.data.frame &amp;lt;- function(data, fn, col_in, col_out = &amp;quot;output&amp;quot;) {
+  condition &amp;lt;- paste0(fn, &amp;quot;(&amp;quot;, col_in, &amp;quot;)&amp;quot;)
+  dplyr::mutate(.data = data, !!col_out := !!rlang::parse_expr(condition))
+}
+head(mutate_with(
+  data = mtcars, fn = &amp;quot;mean&amp;quot;, col_in = &amp;quot;mpg&amp;quot;, col_out = &amp;quot;mean_mpg&amp;quot;
+))
+#    mpg cyl disp  hp drat    wt  qsec vs am gear carb mean_mpg
+# 1 21.0   6  160 110 3.90 2.620 16.46  0  1    4    4 20.09062
+# 2 21.0   6  160 110 3.90 2.875 17.02  0  1    4    4 20.09062
+# 3 22.8   4  108  93 3.85 2.320 18.61  1  1    4    1 20.09062
+# 4 21.4   6  258 110 3.08 3.215 19.44  1  0    3    1 20.09062
+# 5 18.7   8  360 175 3.15 3.440 17.02  0  0    3    2 20.09062
+# 6 18.1   6  225 105 2.76 3.460 20.22  1  0    3    1 20.09062&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;additional-comments&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Additional Comments&lt;/h1&gt;
+&lt;p&gt;What is nice about the solution presented in this blog post is that we can still pass any user defined functions. Let’s say we have a function written in Scala code and exposed to the Spark cluster. We can still call this function. For example below I am using the Hive UDF, &lt;code&gt;reverse()&lt;/code&gt;, to return a column with my last name spelt backwards.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;data &amp;lt;- data.frame(first_name = &amp;quot;nathan&amp;quot;, last_name = &amp;quot;eastwood&amp;quot;)
+data &amp;lt;- dplyr::copy_to(sc, data, &amp;quot;data&amp;quot;)
+mutate_with(data = data, fn = reverse, col_in = &amp;quot;last_name&amp;quot;)
+# # Source: spark&amp;lt;?&amp;gt; [?? x 3]
+#   first_name last_name output  
+#   &amp;lt;chr&amp;gt;      &amp;lt;chr&amp;gt;     &amp;lt;chr&amp;gt;   
+# 1 nathan     eastwood  doowtsae&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In addition it can be a nice way to get around &lt;code&gt;R CMD check&lt;/code&gt; issues. Let’s say we wanted to use the Spark function &lt;code&gt;sequence()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;add_sequence &amp;lt;- function(data, length_to, col_out = &amp;quot;seq&amp;quot;) {
+  dplyr::mutate(.data = data, !!col_out := sequence(1, length_to))
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If we have the above function defined in an R package, we may see the following &lt;code&gt;R CMD check NOTE&lt;/code&gt;.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;checking R code for possible problems ... NOTE
+add_sequence: possible error in sequence(1,
+  length_to): unused argument (length_to)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Whereas using the trick shown in this blog, we no longer see this issue.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;add_sequence &amp;lt;- function(data, fn = sequence, from, to, col_out = &amp;quot;seq&amp;quot;) {
+  fun &amp;lt;- rlang::enquo(fn)
+  dplyr::mutate(.data = data, !!col_out := rlang::call2(.fn = !!fun, from, to))
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Of course, I wouldn’t recommend defining such a function this way.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;To keep things short and sweet, if you wish to pass a function as-is to another function which you then wish to have parsed by dbplyr into SQL code, you must first quote the function with &lt;code&gt;rlang::enquo()&lt;/code&gt; and then unquote it with &lt;code&gt;!!&lt;/code&gt;. You can then build your expression with &lt;code&gt;rlang::call2()&lt;/code&gt; and have this parsed by {dbplyr}.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>poorman: Versions 0.2.2 and 0.2.3 Releases</title>

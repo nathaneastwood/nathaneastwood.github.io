@@ -4,42 +4,71 @@
   
   <url>
     <loc>/categories/</loc>
-    <lastmod>2020-11-14T20:12:00-05:00</lastmod>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/post/</loc>
-    <lastmod>2020-11-14T20:12:00-05:00</lastmod>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/r/</loc>
-    <lastmod>2020-11-14T20:12:00-05:00</lastmod>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2020-11-14T20:12:00-05:00</lastmod>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/tags/</loc>
-    <lastmod>2020-11-14T20:12:00-05:00</lastmod>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>/tags/base/</loc>
-    <lastmod>2020-11-14T20:12:00-05:00</lastmod>
+    <loc>/2021/02/18/using-functions-as-an-input-to-functions-with-dbplyr/</loc>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/dbplyr/</loc>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/tags/dplyr/</loc>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/rlang/</loc>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/rstats/</loc>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/sparklyr/</loc>
+    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/base/</loc>
     <lastmod>2020-11-14T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
@@ -59,12 +88,6 @@
   <url>
     <loc>/2020/11/14/poorman-versions-0.2.2-and-0.2.3-releases/</loc>
     <lastmod>2020-11-14T20:12:00-05:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/rstats/</loc>
-    <lastmod>2020-11-14T20:12:00-05:00</lastmod>
-    <priority>0</priority>
   </url>
   
   <url>
@@ -126,18 +149,6 @@
   <url>
     <loc>/2019/09/22/selecting-the-max-value-from-each-group-a-case-study-dplyr-and-sparklyr/</loc>
     <lastmod>2019-09-22T20:13:14-05:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/dbplyr/</loc>
-    <lastmod>2019-09-22T20:13:14-05:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/sparklyr/</loc>
-    <lastmod>2019-09-22T20:13:14-05:00</lastmod>
-    <priority>0</priority>
   </url>
   
   <url>
