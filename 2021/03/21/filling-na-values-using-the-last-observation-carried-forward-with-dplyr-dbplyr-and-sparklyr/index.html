@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>Filling NA Values Using the Last Observation Carried Forward with {dplyr}, {dbplyr} and {sparklyr} - Random R Ramblings</title>
+<meta property="og:title" content="Filling NA Values Using the Last Observation Carried Forward with {dplyr}, {dbplyr} and {sparklyr} - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+      <li><a href="https://github.com/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://www.linkedin.com/in/nathaneastwood/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="currentColor" d="M290.7 311L95 269.7 86.8 309l195.7 41zm51-87L188.2 95.7l-25.5 30.8 153.5 128.3zm-31.2 39.7L129.2 179l-16.7 36.5L293.7 300zM262 32l-32 24 119.3 160.3 32-24zm20.5 328h-200v39.7h200zm39.7 80H42.7V320h-40v160h359.5V320h-40z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://twitter.com/nathaneastwood_"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="/about/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm95.8 32.6L272 480l-32-136 32-56h-96l32 56-32 136-47.8-191.4C56.9 292 0 350.3 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-72.1-56.9-130.4-128.2-133.8z"/></svg>
+</span></i></a></li>
+    
+  </ul>
+  
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">5 min read</span>
+    
+
+    <h1 class="article-title">Filling NA Values Using the Last Observation Carried Forward with {dplyr}, {dbplyr} and {sparklyr}</h1>
+
+    
+    <span class="article-date">2021-03-21</span>
+    
+
+    <div class="article-content">
+      
+<script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
+
+
+<div id="the-problem" class="section level1">
+<h1>The Problem</h1>
+<p>Real life data is often riddled with missing values - or <code>NA</code>s - where no data value are stored for the variable in observation. Missing data such as this can have a significant effect on the conclusions which can be drawn from the data. For example individuals dropping out of a study or subjects not properly reporting responses. A common solution to this problem is to fill those <code>NA</code> values with the most recent non-<code>NA</code> value prior to it - this is called the Last Observation Carried Forward (LOCF) method.</p>
+<p>This blog post will look at how to implement this particular solution using a combination of {dplyr}, {dbplyr} and {sparklyr}.</p>
+</div>
+<div id="solving-the-problem-with-dbplyr" class="section level1">
+<h1>Solving the Problem with {dbplyr}</h1>
+<p>For this problem we will be using the following temperature data.</p>
+<pre><code># # Source: spark&lt;temperature&gt; [?? x 3]
+#     year month  temp
+#    &lt;int&gt; &lt;int&gt; &lt;dbl&gt;
+#  1  2016     1   6.9
+#  2  2016     2  NA  
+#  3  2016     3  10.1
+#  4  2016     4  11.5
+#  5  2016     5  16.3
+#  6  2016     6  19.1
+#  7  2016     7  NA  
+#  8  2016     8  NA  
+#  9  2016     9  17.6
+# 10  2016    10  13.6
+# # … with more rows</code></pre>
+<p>It might be reasonable to assume that we can fill the <code>NA</code> values of the <code>temp</code> column with the previous month’s data.</p>
+<p>The strategy to forward fill in Spark is to use what’s known as a <a href="https://www.postgresql.org/docs/9.1/tutorial-window.html">window function</a>. A window function performs a calculation across a set of table rows that are somehow related to the current row. This is comparable to the type of calculation that can be done with an aggregate function. But unlike regular aggregate functions, use of a window function does not cause rows to become grouped into a single output row — the rows retain their separate identities. Behind the scenes, the window function is able to access more than just the current row of the query result.</p>
+<p>We can perform window functions in Spark using <code>dbplyr::win_over()</code>. In this function we define the window <code>frame</code> which - for the LOCF method - includes all rows from the beginning of time up to the current row, i.e. <code>-Inf</code> to <code>0</code>. We need to specify that our data follow a particular <code>order</code> which is the <code>month</code> in ascending order. We also need to partition the data by the <code>year</code> which can be thought of as acting like <code>dplyr::group_by()</code>. Finally we define the expression to perform on the data which, since we need the last non-<code>NA</code> value, can be obtained using the Spark SQL function <code>last()</code>.</p>
+<blockquote>
+<p><code>last(expr[, isIgnoreNull])</code> - Returns the last value of expr for a group of rows. If <code>isIgnoreNull</code> is <code>true</code>, returns only non-null values.</p>
+</blockquote>
+<p>Putting this all together, we have the following operation.</p>
+<pre class="r"><code>temperature &lt;- dplyr::mutate(
+  .data = temperature,
+  tempLOCF = dbplyr::win_over(
+    expr = dplyr::sql(&quot;last(temp, true)&quot;),
+    partition = &quot;year&quot;,
+    order = &quot;month&quot;,
+    frame = c(-Inf, 0),
+    con = sc
+  )
+)
+temperature
+# # Source: spark&lt;?&gt; [?? x 4]
+#     year month  temp tempLOCF
+#    &lt;int&gt; &lt;int&gt; &lt;dbl&gt;    &lt;dbl&gt;
+#  1  2016     1   6.9      6.9
+#  2  2016     2  NA        6.9
+#  3  2016     3  10.1     10.1
+#  4  2016     4  11.5     11.5
+#  5  2016     5  16.3     16.3
+#  6  2016     6  19.1     19.1
+#  7  2016     7  NA       19.1
+#  8  2016     8  NA       19.1
+#  9  2016     9  17.6     17.6
+# 10  2016    10  13.6     13.6
+# # … with more rows</code></pre>
+<p>So now we can see that we have filled the values as expected. The way this works is that {dbplyr} takes our regular {dplyr} code and translates it to SQL code. We can see the SQL that {dbplyr} generates for us with <code>dbplyr::sql_render()</code>.</p>
+<pre class="r"><code>dbplyr::sql_render(query = temperature)
+# &lt;SQL&gt; SELECT `year`, `month`, `temp`, last(temp, true) OVER (PARTITION BY `year` ORDER BY `month` ROWS UNBOUNDED PRECEDING) AS `tempLOCF`
+# FROM `temperature`</code></pre>
+<p>Note that the <code>con = sc</code> here is required such that {dbplyr} can set up the SQL for the particular database engine you are working with - in this case, Spark.</p>
+</div>
+<div id="bonus---next-observation-carried-backwards" class="section level1">
+<h1>Bonus - Next Observation Carried Backwards</h1>
+<p>The Next Observation Carried Backwards method is very similar to LOCF except, you guessed it, we carry the next non-<code>NA</code> value backwards. This can be achieved with the exact same code expect the <code>frame</code> changes to be from the current row to the end of the partition (or group) and we take the <code>first()</code> non-<code>NA</code> value from the window frame.</p>
+<pre class="r"><code>dplyr::mutate(
+  .data = temperature,
+  tempNOCB = dbplyr::win_over(
+    expr = dplyr::sql(&quot;first(temp, true)&quot;),
+    partition = &quot;year&quot;,
+    order = &quot;month&quot;,
+    frame = c(0, Inf),
+    con = sc
+  )
+)
+# # Source: spark&lt;?&gt; [?? x 5]
+#     year month  temp tempLOCF tempNOCB
+#    &lt;int&gt; &lt;int&gt; &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+#  1  2016     1   6.9      6.9      6.9
+#  2  2016     2  NA        6.9     10.1
+#  3  2016     3  10.1     10.1     10.1
+#  4  2016     4  11.5     11.5     11.5
+#  5  2016     5  16.3     16.3     16.3
+#  6  2016     6  19.1     19.1     19.1
+#  7  2016     7  NA       19.1     17.6
+#  8  2016     8  NA       19.1     17.6
+#  9  2016     9  17.6     17.6     17.6
+# 10  2016    10  13.6     13.6     13.6
+# # … with more rows</code></pre>
+<p>For what it’s worth, this functionality very recently became available via the <code>tidyr::fill()</code>, for which there is now a <a href="https://dbplyr.tidyverse.org/reference/fill.tbl_lazy.html"><code>tbl_lazy</code> method</a> in {dbplyr}.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+
+</main>
+
+      <footer class="footer">
+    
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"/></svg>
+</span></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

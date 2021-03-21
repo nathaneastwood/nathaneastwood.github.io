@@ -5,10 +5,112 @@
     <description>Recent content in dplyr on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Thu, 18 Feb 2021 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 21 Mar 2021 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/tags/dplyr/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Filling NA Values Using the Last Observation Carried Forward with {dplyr}, {dbplyr} and {sparklyr}</title>
+      <link>/2021/03/21/filling-na-values-using-the-last-observation-carried-forward-with-dplyr-dbplyr-and-sparklyr/</link>
+      <pubDate>Sun, 21 Mar 2021 20:12:00 -0500</pubDate>
+      
+      <guid>/2021/03/21/filling-na-values-using-the-last-observation-carried-forward-with-dplyr-dbplyr-and-sparklyr/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;the-problem&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;The Problem&lt;/h1&gt;
+&lt;p&gt;Real life data is often riddled with missing values - or &lt;code&gt;NA&lt;/code&gt;s - where no data value are stored for the variable in observation. Missing data such as this can have a significant effect on the conclusions which can be drawn from the data. For example individuals dropping out of a study or subjects not properly reporting responses. A common solution to this problem is to fill those &lt;code&gt;NA&lt;/code&gt; values with the most recent non-&lt;code&gt;NA&lt;/code&gt; value prior to it - this is called the Last Observation Carried Forward (LOCF) method.&lt;/p&gt;
+&lt;p&gt;This blog post will look at how to implement this particular solution using a combination of {dplyr}, {dbplyr} and {sparklyr}.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;solving-the-problem-with-dbplyr&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Solving the Problem with {dbplyr}&lt;/h1&gt;
+&lt;p&gt;For this problem we will be using the following temperature data.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# # Source: spark&amp;lt;temperature&amp;gt; [?? x 3]
+#     year month  temp
+#    &amp;lt;int&amp;gt; &amp;lt;int&amp;gt; &amp;lt;dbl&amp;gt;
+#  1  2016     1   6.9
+#  2  2016     2  NA  
+#  3  2016     3  10.1
+#  4  2016     4  11.5
+#  5  2016     5  16.3
+#  6  2016     6  19.1
+#  7  2016     7  NA  
+#  8  2016     8  NA  
+#  9  2016     9  17.6
+# 10  2016    10  13.6
+# # … with more rows&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It might be reasonable to assume that we can fill the &lt;code&gt;NA&lt;/code&gt; values of the &lt;code&gt;temp&lt;/code&gt; column with the previous month’s data.&lt;/p&gt;
+&lt;p&gt;The strategy to forward fill in Spark is to use what’s known as a &lt;a href=&#34;https://www.postgresql.org/docs/9.1/tutorial-window.html&#34;&gt;window function&lt;/a&gt;. A window function performs a calculation across a set of table rows that are somehow related to the current row. This is comparable to the type of calculation that can be done with an aggregate function. But unlike regular aggregate functions, use of a window function does not cause rows to become grouped into a single output row — the rows retain their separate identities. Behind the scenes, the window function is able to access more than just the current row of the query result.&lt;/p&gt;
+&lt;p&gt;We can perform window functions in Spark using &lt;code&gt;dbplyr::win_over()&lt;/code&gt;. In this function we define the window &lt;code&gt;frame&lt;/code&gt; which - for the LOCF method - includes all rows from the beginning of time up to the current row, i.e. &lt;code&gt;-Inf&lt;/code&gt; to &lt;code&gt;0&lt;/code&gt;. We need to specify that our data follow a particular &lt;code&gt;order&lt;/code&gt; which is the &lt;code&gt;month&lt;/code&gt; in ascending order. We also need to partition the data by the &lt;code&gt;year&lt;/code&gt; which can be thought of as acting like &lt;code&gt;dplyr::group_by()&lt;/code&gt;. Finally we define the expression to perform on the data which, since we need the last non-&lt;code&gt;NA&lt;/code&gt; value, can be obtained using the Spark SQL function &lt;code&gt;last()&lt;/code&gt;.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;last(expr[, isIgnoreNull])&lt;/code&gt; - Returns the last value of expr for a group of rows. If &lt;code&gt;isIgnoreNull&lt;/code&gt; is &lt;code&gt;true&lt;/code&gt;, returns only non-null values.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Putting this all together, we have the following operation.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;temperature &amp;lt;- dplyr::mutate(
+  .data = temperature,
+  tempLOCF = dbplyr::win_over(
+    expr = dplyr::sql(&amp;quot;last(temp, true)&amp;quot;),
+    partition = &amp;quot;year&amp;quot;,
+    order = &amp;quot;month&amp;quot;,
+    frame = c(-Inf, 0),
+    con = sc
+  )
+)
+temperature
+# # Source: spark&amp;lt;?&amp;gt; [?? x 4]
+#     year month  temp tempLOCF
+#    &amp;lt;int&amp;gt; &amp;lt;int&amp;gt; &amp;lt;dbl&amp;gt;    &amp;lt;dbl&amp;gt;
+#  1  2016     1   6.9      6.9
+#  2  2016     2  NA        6.9
+#  3  2016     3  10.1     10.1
+#  4  2016     4  11.5     11.5
+#  5  2016     5  16.3     16.3
+#  6  2016     6  19.1     19.1
+#  7  2016     7  NA       19.1
+#  8  2016     8  NA       19.1
+#  9  2016     9  17.6     17.6
+# 10  2016    10  13.6     13.6
+# # … with more rows&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So now we can see that we have filled the values as expected. The way this works is that {dbplyr} takes our regular {dplyr} code and translates it to SQL code. We can see the SQL that {dbplyr} generates for us with &lt;code&gt;dbplyr::sql_render()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dbplyr::sql_render(query = temperature)
+# &amp;lt;SQL&amp;gt; SELECT `year`, `month`, `temp`, last(temp, true) OVER (PARTITION BY `year` ORDER BY `month` ROWS UNBOUNDED PRECEDING) AS `tempLOCF`
+# FROM `temperature`&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Note that the &lt;code&gt;con = sc&lt;/code&gt; here is required such that {dbplyr} can set up the SQL for the particular database engine you are working with - in this case, Spark.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;bonus---next-observation-carried-backwards&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Bonus - Next Observation Carried Backwards&lt;/h1&gt;
+&lt;p&gt;The Next Observation Carried Backwards method is very similar to LOCF except, you guessed it, we carry the next non-&lt;code&gt;NA&lt;/code&gt; value backwards. This can be achieved with the exact same code expect the &lt;code&gt;frame&lt;/code&gt; changes to be from the current row to the end of the partition (or group) and we take the &lt;code&gt;first()&lt;/code&gt; non-&lt;code&gt;NA&lt;/code&gt; value from the window frame.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;dplyr::mutate(
+  .data = temperature,
+  tempNOCB = dbplyr::win_over(
+    expr = dplyr::sql(&amp;quot;first(temp, true)&amp;quot;),
+    partition = &amp;quot;year&amp;quot;,
+    order = &amp;quot;month&amp;quot;,
+    frame = c(0, Inf),
+    con = sc
+  )
+)
+# # Source: spark&amp;lt;?&amp;gt; [?? x 5]
+#     year month  temp tempLOCF tempNOCB
+#    &amp;lt;int&amp;gt; &amp;lt;int&amp;gt; &amp;lt;dbl&amp;gt;    &amp;lt;dbl&amp;gt;    &amp;lt;dbl&amp;gt;
+#  1  2016     1   6.9      6.9      6.9
+#  2  2016     2  NA        6.9     10.1
+#  3  2016     3  10.1     10.1     10.1
+#  4  2016     4  11.5     11.5     11.5
+#  5  2016     5  16.3     16.3     16.3
+#  6  2016     6  19.1     19.1     19.1
+#  7  2016     7  NA       19.1     17.6
+#  8  2016     8  NA       19.1     17.6
+#  9  2016     9  17.6     17.6     17.6
+# 10  2016    10  13.6     13.6     13.6
+# # … with more rows&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For what it’s worth, this functionality very recently became available via the &lt;code&gt;tidyr::fill()&lt;/code&gt;, for which there is now a &lt;a href=&#34;https://dbplyr.tidyverse.org/reference/fill.tbl_lazy.html&#34;&gt;&lt;code&gt;tbl_lazy&lt;/code&gt; method&lt;/a&gt; in {dbplyr}.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>Using Functions As An Input To Functions With {dbplyr}</title>

@@ -4,31 +4,60 @@
   
   <url>
     <loc>/categories/</loc>
-    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
+    <loc>/2021/03/21/filling-na-values-using-the-last-observation-carried-forward-with-dplyr-dbplyr-and-sparklyr/</loc>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/post/</loc>
-    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/r/</loc>
-    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/tags/</loc>
-    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/dbplyr/</loc>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/dplyr/</loc>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/rstats/</loc>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/sparklyr/</loc>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -38,31 +67,7 @@
   </url>
   
   <url>
-    <loc>/tags/dbplyr/</loc>
-    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/dplyr/</loc>
-    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/tags/rlang/</loc>
-    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/rstats/</loc>
-    <lastmod>2021-02-18T20:12:00-05:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/sparklyr/</loc>
     <lastmod>2021-02-18T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
