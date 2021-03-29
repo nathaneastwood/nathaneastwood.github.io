@@ -4,37 +4,54 @@
   
   <url>
     <loc>/categories/</loc>
-    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>/2021/03/21/filling-na-values-using-the-last-observation-carried-forward-with-dplyr-dbplyr-and-sparklyr/</loc>
-    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/post/</loc>
-    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/r/</loc>
-    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/tags/</loc>
-    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
+    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
     <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/poorman/</loc>
+    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/rstats/</loc>
+    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/2021/03/29/poorman-version-0.2.5-release/</loc>
+    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/2021/03/21/filling-na-values-using-the-last-observation-carried-forward-with-dplyr-dbplyr-and-sparklyr/</loc>
+    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
   </url>
   
   <url>
@@ -45,12 +62,6 @@
   
   <url>
     <loc>/tags/dplyr/</loc>
-    <lastmod>2021-03-21T20:12:00-05:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/rstats/</loc>
     <lastmod>2021-03-21T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>
@@ -80,12 +91,6 @@
   
   <url>
     <loc>/tags/nse/</loc>
-    <lastmod>2020-11-14T20:12:00-05:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/poorman/</loc>
     <lastmod>2020-11-14T20:12:00-05:00</lastmod>
     <priority>0</priority>
   </url>

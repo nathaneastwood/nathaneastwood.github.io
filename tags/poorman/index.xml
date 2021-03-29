@@ -5,10 +5,46 @@
     <description>Recent content in poorman on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Sat, 14 Nov 2020 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Mon, 29 Mar 2021 20:12:00 -0500</lastBuildDate>
     
         <atom:link href="/tags/poorman/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>{poorman}: Version 0.2.5 Release</title>
+      <link>/2021/03/29/poorman-version-0.2.5-release/</link>
+      <pubDate>Mon, 29 Mar 2021 20:12:00 -0500</pubDate>
+      
+      <guid>/2021/03/29/poorman-version-0.2.5-release/</guid>
+      <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
+
+
+&lt;div id=&#34;poorman-0.2.5&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;{poorman} 0.2.5&lt;/h1&gt;
+&lt;p&gt;Yesterday I released the ninth version of &lt;a href=&#34;https://github.com/nathaneastwood/poorman&#34;&gt;{poorman}&lt;/a&gt; to CRAN.&lt;/p&gt;
+&lt;p&gt;This update has added the following new features:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;summarise()&lt;/code&gt; can now revise grouping structures with the &lt;code&gt;.groups&lt;/code&gt; argument (&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues/82&#34;&gt;#57&lt;/a&gt;).&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;group_by()&lt;/code&gt; can now drop groups formed by factor levels that don’t appear in the data with the &lt;code&gt;.drop&lt;/code&gt; parameter (&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues/63&#34;&gt;#63&lt;/a&gt;).&lt;/li&gt;
+&lt;li&gt;New cumulative functions have been added: &lt;code&gt;cumall()&lt;/code&gt;, &lt;code&gt;cumany()&lt;/code&gt; and &lt;code&gt;cummean()&lt;/code&gt; (&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues/64&#34;&gt;#64&lt;/a&gt;).&lt;/li&gt;
+&lt;li&gt;Additional tools for working with rownames have been added: &lt;code&gt;has_rownames()&lt;/code&gt;, &lt;code&gt;remove_rownames()&lt;/code&gt;, &lt;code&gt;column_to_rownames()&lt;/code&gt;, &lt;code&gt;rowid_to_column()&lt;/code&gt; (&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues/66&#34;&gt;#66&lt;/a&gt;).&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;filter()&lt;/code&gt; gains the &lt;code&gt;.preserve&lt;/code&gt; parameters (&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues/81&#34;&gt;#81&lt;/a&gt;).&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;if_any()&lt;/code&gt; and &lt;code&gt;if_all()&lt;/code&gt; were added (#80).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The following fixes were also implemented:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;mutate()&lt;/code&gt; now successfully evaluates functions defined in the scope of a parent function (&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues/68&#34;&gt;#68&lt;/a&gt;).&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;select_positions()&lt;/code&gt; now works if passed a combination of positive and negative values (&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues/71&#34;&gt;#71&lt;/a&gt;).&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;transmute()&lt;/code&gt; now keeps unnamed columns that it creates (&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues/72&#34;&gt;#72&lt;/a&gt;).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The following refactorisations took place:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;When grouping data with &lt;code&gt;group_by()&lt;/code&gt;, it will now create an object of class &lt;code&gt;grouped_df&lt;/code&gt; and not &lt;code&gt;grouped_data&lt;/code&gt; which keeps it consistent with the {dplyr} method name (&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues/70&#34;&gt;#70&lt;/a&gt;). This should hopefully make transitioning packages from {dplyr} to {poorman} a little easier.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>poorman: Versions 0.2.2 and 0.2.3 Releases</title>

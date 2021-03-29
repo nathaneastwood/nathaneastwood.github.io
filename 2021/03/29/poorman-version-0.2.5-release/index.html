@@ -6,8 +6,8 @@
 <meta name="generator" content="Hugo 0.56.3" />
 
 
-<title>Categories - Random R Ramblings</title>
-<meta property="og:title" content="Categories - Random R Ramblings">
+<title>{poorman}: Version 0.2.5 Release - Random R Ramblings</title>
+<meta property="og:title" content="{poorman}: Version 0.2.5 Release - Random R Ramblings">
 
 
 
@@ -17,8 +17,6 @@
 
 
 
-
-<link href="/categories/index.xml" rel="alternate" type="application/rss+xml" title="Random R Ramblings" />
 
 
 
@@ -65,22 +63,75 @@
 
 <main class="content" role="main">
 
+  <article class="article">
+    
+    <span class="article-duration">1 min read</span>
+    
+
+    <h1 class="article-title">{poorman}: Version 0.2.5 Release</h1>
+
+    
+    <span class="article-date">2021-03-29</span>
+    
+
+    <div class="article-content">
+      
+<script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
+
+
+<div id="poorman-0.2.5" class="section level1">
+<h1>{poorman} 0.2.5</h1>
+<p>Yesterday I released the ninth version of <a href="https://github.com/nathaneastwood/poorman">{poorman}</a> to CRAN.</p>
+<p>This update has added the following new features:</p>
+<ul>
+<li><code>summarise()</code> can now revise grouping structures with the <code>.groups</code> argument (<a href="https://github.com/nathaneastwood/poorman/issues/82">#57</a>).</li>
+<li><code>group_by()</code> can now drop groups formed by factor levels that don’t appear in the data with the <code>.drop</code> parameter (<a href="https://github.com/nathaneastwood/poorman/issues/63">#63</a>).</li>
+<li>New cumulative functions have been added: <code>cumall()</code>, <code>cumany()</code> and <code>cummean()</code> (<a href="https://github.com/nathaneastwood/poorman/issues/64">#64</a>).</li>
+<li>Additional tools for working with rownames have been added: <code>has_rownames()</code>, <code>remove_rownames()</code>, <code>column_to_rownames()</code>, <code>rowid_to_column()</code> (<a href="https://github.com/nathaneastwood/poorman/issues/66">#66</a>).</li>
+<li><code>filter()</code> gains the <code>.preserve</code> parameters (<a href="https://github.com/nathaneastwood/poorman/issues/81">#81</a>).</li>
+<li><code>if_any()</code> and <code>if_all()</code> were added (#80).</li>
+</ul>
+<p>The following fixes were also implemented:</p>
+<ul>
+<li><code>mutate()</code> now successfully evaluates functions defined in the scope of a parent function (<a href="https://github.com/nathaneastwood/poorman/issues/68">#68</a>).</li>
+<li><code>select_positions()</code> now works if passed a combination of positive and negative values (<a href="https://github.com/nathaneastwood/poorman/issues/71">#71</a>).</li>
+<li><code>transmute()</code> now keeps unnamed columns that it creates (<a href="https://github.com/nathaneastwood/poorman/issues/72">#72</a>).</li>
+</ul>
+<p>The following refactorisations took place:</p>
+<ul>
+<li>When grouping data with <code>group_by()</code>, it will now create an object of class <code>grouped_df</code> and not <code>grouped_data</code> which keeps it consistent with the {dplyr} method name (<a href="https://github.com/nathaneastwood/poorman/issues/70">#70</a>). This should hopefully make transitioning packages from {dplyr} to {poorman} a little easier.</li>
+</ul>
+</div>
+
+    </div>
+  </article>
+
   
-  <div class="archive">
-    
-    
-    
-    <h2 class="archive-title">2021</h2>
-    
-    <article class="archive-item">
-      <a href="/categories/r/" class="archive-item-link">R</a>
-      <span class="archive-item-date">
-        2021-03-29
-      </span>
-    </article>
-    
-    
-  </div>
+
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
 
 </main>
 
