@@ -4,44 +4,55 @@
   
   <url>
     <loc>/categories/</loc>
-    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+    <lastmod>2026-10-25T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/post/</loc>
-    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+    <lastmod>2026-10-25T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/r/</loc>
-    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+    <lastmod>2026-10-25T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+    <lastmod>2026-10-25T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/tags/</loc>
-    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+    <lastmod>2026-10-25T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/performance/</loc>
+    <lastmod>2026-10-25T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/tags/poorman/</loc>
-    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+    <lastmod>2026-10-25T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/tags/rstats/</loc>
-    <lastmod>2021-03-29T20:12:00-05:00</lastmod>
+    <lastmod>2026-10-25T00:00:00+00:00</lastmod>
     <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/2026/10/25/poorman-tips-and-tricks-for-faster-grouped-operations-in-base-r/</loc>
+    <lastmod>2026-10-25T00:00:00+00:00</lastmod>
   </url>
   
   <url>

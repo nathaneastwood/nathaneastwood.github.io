@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en-gb">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.56.3" />
+
+
+<title>{poorman}: Tips and Tricks for Faster Grouped Operations in base R - Random R Ramblings</title>
+<meta property="og:title" content="{poorman}: Tips and Tricks for Faster Grouped Operations in base R - Random R Ramblings">
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdn.bootcss.com/highlight.js/9.11.0/styles/dracula.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.JPG"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+      <li><a href="https://github.com/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://www.linkedin.com/in/nathaneastwood/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://stackoverflow.com/users/3759418/nathaneastwood"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="currentColor" d="M290.7 311L95 269.7 86.8 309l195.7 41zm51-87L188.2 95.7l-25.5 30.8 153.5 128.3zm-31.2 39.7L129.2 179l-16.7 36.5L293.7 300zM262 32l-32 24 119.3 160.3 32-24zm20.5 328h-200v39.7h200zm39.7 80H42.7V320h-40v160h359.5V320h-40z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="https://twitter.com/nathaneastwood_"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+</span></i></a></li>
+    
+      <li><a href="/about/"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm95.8 32.6L272 480l-32-136 32-56h-96l32 56-32 136-47.8-191.4C56.9 292 0 350.3 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-72.1-56.9-130.4-128.2-133.8z"/></svg>
+</span></i></a></li>
+    
+  </ul>
+  
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">22 min read</span>
+    
+
+    <h1 class="article-title">{poorman}: Tips and Tricks for Faster Grouped Operations in base R</h1>
+
+    
+    <span class="article-date">2026-10-25</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>When learning R, we are always told to vectorise, vectorise, vectorise. This is because R is an interpreted language.
+Every time R runs a line of R code, it has to look up each name, match the arguments of each function call and set up
+a new environment for each function it enters. A vectorised function such as <code>*</code>, <code>cumsum()</code> or <code>match()</code> does that
+once and then loops over the elements in compiled code, where each step is very cheap. A <code>for</code> loop written in R does
+it on every iteration.</p>
+<pre class="r"><code>set.seed(42)
+x &lt;- runif(1e5)
+loop &lt;- function(x) {
+  out &lt;- numeric(length(x))
+  for (i in seq_along(x)) out[i] &lt;- x[i] * 2
+  out
+}
+bench::mark(loop = loop(x), vectorised = x * 2)[, c(&quot;expression&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &lt;bch:expr&gt; &lt;bch:tm&gt; &lt;bch:byt&gt;
+# 1 loop         2.22ms     819KB
+# 2 vectorised  59.02us     781KB</code></pre>
+<p>The loop gives the same answer and uses the same memory, but it is nearly 40 times slower. Bear in mind that
+<code>lapply()</code>, <code>vapply()</code> and friends are loops too. They tidy the loop away, but each iteration still calls an R
+function, so what matters is how many times we go round and how much work we do each time.</p>
+<p>Grouped operations make this advice tricky to follow. <code>mutate(df, y = x - mean(x))</code> on grouped data means “evaluate
+<code>x - mean(x)</code> for each group”, and since the expression can be any R code at all, there is no way around evaluating it
+once per group. What we can do is make everything around that loop vectorised, and keep the work inside it to a
+minimum.</p>
+<p>{poorman} has not always done this. When I <a href="https://nathaneastwood.github.io/2020/02/27/building-a-base-dplyr-with-primitives-grouped-operations-pipes-and-more/">first wrote about grouped operations in
+{poorman}</a>,
+they used the classic split-apply-combine approach: split the <code>data.frame</code> into one <code>data.frame</code> per group, run the
+verb on each piece and <code>rbind()</code> the results back together. It was simple, but it was slow once there were more than a
+few hundred groups. I have since rewritten the grouped verbs, and in this post I want to share the tricks that made the
+difference. All of them are plain base R, so you can use them in your own code too.</p>
+</div>
+<div id="split-apply-combine-versus-vectorised" class="section level1">
+<h1>Split-Apply-Combine Versus Vectorised</h1>
+<p>To keep things concrete, let’s centre a column within groups, which is what <code>mutate(x = x - mean(x))</code> does on grouped
+data. The split-apply-combine version is how most of us would first write it.</p>
+<pre class="r"><code>centre_split &lt;- function(df) {
+  df$row &lt;- seq_len(nrow(df))
+  pieces &lt;- split(df, df$g)
+  pieces &lt;- lapply(pieces, function(piece) {
+    piece$centred &lt;- piece$x - mean(piece$x)
+    piece
+  })
+  res &lt;- do.call(rbind, pieces)
+  res$centred[order(res$row)]
+}</code></pre>
+<p>And here is the version {poorman} has ended up with, stripped down to the bare bones.</p>
+<pre class="r"><code>centre_fast &lt;- function(df) {
+  ids &lt;- match(df$g, unique(df$g))
+  f &lt;- structure(ids, levels = as.character(seq_len(max(ids))), class = &quot;factor&quot;)
+  pieces &lt;- split.default(df$x, f)
+  res &lt;- unlist(lapply(pieces, function(x) x - mean(x)), use.names = FALSE)
+  rows &lt;- unlist(split.default(seq_along(ids), f), use.names = FALSE)
+  back &lt;- integer(length(rows))
+  back[rows] &lt;- seq_along(rows)
+  res[back]
+}</code></pre>
+<p>Both still have an <code>lapply()</code> over the groups. The difference is what else happens. <code>centre_split()</code> builds a
+<code>data.frame</code> for every group, adds a column to each one and then binds them all back together. <code>centre_fast()</code> only
+splits the one column it needs, does nothing in the loop except the calculation itself, and combines the results with
+a single <code>unlist()</code>.</p>
+<p>To time them, I use <code>bench::press()</code>, which runs <code>bench::mark()</code> once for each value of <code>n_groups</code>, on 100,000 rows.
+<code>bench::mark()</code> also checks that both functions return the same result.</p>
+<pre class="r"><code>res &lt;- bench::press(
+  n_groups = c(10, 1e3, 1e4),
+  {
+    set.seed(42)
+    df &lt;- data.frame(g = sample(n_groups, 1e5, replace = TRUE), x = runif(1e5))
+    bench::mark(split = centre_split(df), fast = centre_fast(df), iterations = 10L)
+  },
+  .quiet = TRUE
+)
+res[, c(&quot;expression&quot;, &quot;n_groups&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]
+# # A tibble: 6 x 4
+#   expression n_groups   median mem_alloc
+#   &lt;bch:expr&gt;    &lt;dbl&gt; &lt;bch:tm&gt; &lt;bch:byt&gt;
+# 1 split            10  29.62ms    26.1MB
+# 2 fast             10   3.76ms    7.57MB
+# 3 split          1000  86.71ms   61.97MB
+# 4 fast           1000   6.23ms    7.67MB
+# 5 split         10000 522.85ms   55.61MB
+# 6 fast          10000  26.27ms    6.18MB</code></pre>
+<p><code>centre_fast()</code> is about 8 times faster with 10 groups, 14 times faster with 1,000 groups and 20 times faster with
+10,000 groups, and it uses far less memory. Let’s go through the tricks one at a time. For the rest of the post, I’ll
+use this data for the timings, with 1,000 groups:</p>
+<pre class="r"><code>set.seed(42)
+n &lt;- 1e5
+df &lt;- data.frame(g = sample(1e3, n, replace = TRUE), x = runif(n))
+g &lt;- df$g</code></pre>
+<p>and this small dataset to show what each trick does.</p>
+<pre class="r"><code>sales &lt;- data.frame(
+  shop = c(&quot;b&quot;, &quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;a&quot;, &quot;b&quot;),
+  day = c(1L, 1L, 2L, 1L, 1L, 2L),
+  amount = c(2, 4, 6, 8, 10, 12)
+)
+sales
+#   shop day amount
+# 1    b   1      2
+# 2    a   1      4
+# 3    b   2      6
+# 4    c   1      8
+# 5    a   1     10
+# 6    b   2     12</code></pre>
+</div>
+<div id="tip-1-number-the-groups-with-match" class="section level1">
+<h1>Tip 1: Number the Groups With <code>match()</code></h1>
+<p>The first job is to work out which rows belong to which group. The obvious way is to compare every row with every
+group.</p>
+<pre class="r"><code>lapply(unique(sales$shop), function(shop) which(sales$shop == shop))
+# [[1]]
+# [1] 1 3 6
+# 
+# [[2]]
+# [1] 2 5
+# 
+# [[3]]
+# [1] 4</code></pre>
+<p>That is <code>n * G</code> comparisons for <code>n</code> rows and <code>G</code> groups, and each comparison allocates a new logical vector the length
+of the data. It is much faster to give each row a group number in one go with <code>match()</code>.</p>
+<pre class="r"><code>match(sales$shop, unique(sales$shop))
+# [1] 1 2 1 3 2 1</code></pre>
+<p>Each value gets the position where it first appears in <code>unique(sales$shop)</code>, so the groups are numbered in the order
+they appear. Both <code>unique()</code> and <code>match()</code> hand their work to C code inside R itself (you can see the call to
+<code>.Internal()</code> if you print <code>match</code>), and that code uses a <em>hash table</em>. A hash table is a lookup table where each value
+is turned into a number, its hash, which says where in the table the value is stored. Looking a value up then means
+working out its hash and checking that one place, rather than searching the whole table, so it takes about the same
+time however many values are stored. <code>unique()</code> goes through the vector once and adds each value it hasn’t seen
+before to a table; <code>match()</code> puts the values of <code>unique(sales$shop)</code> in a table and looks up each element of
+<code>sales$shop</code> in it. Either way, each row is looked at once, whatever the number of groups.</p>
+<pre class="r"><code>bench::mark(
+  compare = lapply(unique(g), function(value) which(g == value)),
+  match = match(g, unique(g)),
+  check = FALSE
+)[, c(&quot;expression&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &lt;bch:expr&gt; &lt;bch:tm&gt; &lt;bch:byt&gt;
+# 1 compare       162ms  764.87MB
+# 2 match         653us    2.16MB</code></pre>
+<p>(<code>check = FALSE</code> is needed here because the two give their answers in different forms; Tip 2 turns the group numbers
+into the rows of each group.)</p>
+<p>With more than one grouping column, we need a number for each <em>combination</em> of values. The original version of
+{poorman} used base R’s <code>interaction()</code> for this, which builds a label for each row by pasting the values together
+with a <code>"."</code>. Unfortunately, pasting can give two different groups the same label.</p>
+<pre class="r"><code>interaction(c(&quot;a.b&quot;, &quot;a&quot;), c(&quot;c&quot;, &quot;b.c&quot;))
+# [1] a.b.c a.b.c
+# Levels: a.b.c a.b.b.c a.c</code></pre>
+<p><code>("a.b", "c")</code> and <code>("a", "b.c")</code> are different groups, but both become <code>a.b.c</code>. <code>interaction()</code> also makes a level
+for every possible combination of values, whether or not it appears in the data, which can use a lot of memory with
+several columns. Instead, I number each column with <code>match()</code> and combine the numbers with a little arithmetic, a bit
+like turning two digits into one number.</p>
+<pre class="r"><code>shop_id &lt;- match(sales$shop, unique(sales$shop))
+day_id &lt;- match(sales$day, unique(sales$day))
+combined &lt;- (shop_id - 1) * max(day_id) + day_id
+combined
+# [1] 1 3 2 5 3 2
+match(combined, unique(combined))
+# [1] 1 2 3 4 2 3</code></pre>
+<p>Each <code>(shop, day)</code> pair gets its own number, so no two groups can collide. Calling <code>match()</code> again on the combined
+number brings the ids back down to <code>1, 2, ..., G</code>, so they stay small when there are more columns to add. The <code>- 1</code> is
+a double, so the arithmetic is done in doubles and can’t overflow R’s integers.</p>
+</div>
+<div id="tip-2-build-factors-by-hand" class="section level1">
+<h1>Tip 2: Build Factors by Hand</h1>
+<p>Given the group ids, <code>split()</code> gives us the rows of each group. But <code>split()</code> wants a factor, and calling <code>factor(ids)</code>
+would sort the unique values and <code>match()</code> every value against them again: work we have already done. The ids are
+already the integer codes <code>1:G</code>, so I attach the <code>levels</code> and <code>class</code> attributes directly with <code>structure()</code> and have a
+valid factor at no cost.</p>
+<pre class="r"><code>ids &lt;- match(combined, unique(combined))
+f &lt;- structure(ids, levels = as.character(seq_len(max(ids))), class = &quot;factor&quot;)
+f
+# [1] 1 2 3 4 2 3
+# Levels: 1 2 3 4
+split.default(seq_along(ids), f)
+# $`1`
+# [1] 1
+# 
+# $`2`
+# [1] 2 5
+# 
+# $`3`
+# [1] 3 6
+# 
+# $`4`
+# [1] 4</code></pre>
+<p>On 100,000 rows with 1,000 groups, this is 4 times faster than going through <code>factor()</code>.</p>
+<pre class="r"><code>ids &lt;- match(g, unique(g))
+bench::mark(
+  factor = split(seq_along(ids), factor(ids)),
+  structure = split(seq_along(ids), structure(ids, levels = as.character(seq_len(max(ids))), class = &quot;factor&quot;))
+)[, c(&quot;expression&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &lt;bch:expr&gt; &lt;bch:tm&gt; &lt;bch:byt&gt;
+# 1 factor       5.63ms     4.2MB
+# 2 structure    1.28ms     1.2MB</code></pre>
+<p>This only works because the ids are whole numbers from 1 to <code>G</code> with no gaps, which <code>match()</code> guarantees.</p>
+</div>
+<div id="tip-3-split-columns-not-data.frames" class="section level1">
+<h1>Tip 3: Split Columns, Not <code>data.frame</code>s</h1>
+<p><code>split()</code> on a <code>data.frame</code> calls <code>[.data.frame</code> once for each group. <code>[.data.frame</code> is a long R function that has to
+handle every way of indexing a <code>data.frame</code> and checks the row names every time. Splitting each column on its own
+avoids all of that.</p>
+<pre class="r"><code>f &lt;- structure(ids, levels = as.character(seq_len(max(ids))), class = &quot;factor&quot;)
+bench::mark(
+  data_frame = split(df, f),
+  columns = lapply(df, split.default, f),
+  check = FALSE
+)[, c(&quot;expression&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &lt;bch:expr&gt; &lt;bch:tm&gt; &lt;bch:byt&gt;
+# 1 data_frame  13.01ms     3.9MB
+# 2 columns      2.04ms    2.02MB</code></pre>
+<p>There is a second choice to make here. If we already have the rows of each group, we can also split a column by
+indexing it once per group, <code>lapply(rows, function(i) x[i])</code>. Which is faster depends on the size of the groups.</p>
+<pre class="r"><code>res &lt;- bench::press(
+  n_groups = c(100, 1e3, 3e3, 1e4),
+  {
+    set.seed(42)
+    x &lt;- runif(1e5)
+    ids &lt;- match(sample(n_groups, 1e5, replace = TRUE), seq_len(n_groups))
+    f &lt;- structure(ids, levels = as.character(seq_len(n_groups)), class = &quot;factor&quot;)
+    rows &lt;- split.default(seq_along(x), f)
+    bench::mark(index = lapply(rows, function(i) x[i]), split = split.default(x, f), check = FALSE)
+  },
+  .quiet = TRUE
+)
+res[, c(&quot;expression&quot;, &quot;n_groups&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]
+# # A tibble: 8 x 4
+#   expression n_groups   median mem_alloc
+#   &lt;bch:expr&gt;    &lt;dbl&gt; &lt;bch:tm&gt; &lt;bch:byt&gt;
+# 1 index           100 232.35us  786.77KB
+# 2 split           100 964.07us    1.15MB
+# 3 index          1000 526.28us  835.98KB
+# 4 split          1000   1.02ms     1.2MB
+# 5 index          3000    1.1ms  944.86KB
+# 6 split          3000    1.1ms    1.32MB
+# 7 index         10000    2.9ms  131.44KB
+# 8 split         10000   1.18ms  561.22KB</code></pre>
+<p><code>split.default()</code> costs about 1 ms whatever the number of groups, because it always goes through the whole column.
+Indexing costs one R function call per group, so it is cheap with a few large groups and expensive with many small
+ones. The two meet at about 3,000 groups, which is about 33 rows per group, so {poorman} indexes when the groups have
+32 rows or more on average and uses <code>split.default()</code> otherwise.</p>
+</div>
+<div id="tip-4-combine-with-one-unlist" class="section level1">
+<h1>Tip 4: Combine With One <code>unlist()</code></h1>
+<p><code>do.call(rbind, pieces)</code> has the same problem as splitting a <code>data.frame</code>, but in reverse. <code>rbind.data.frame()</code> has to
+cope with columns in a different order, factors with different levels, duplicated row names and more, and it does
+those checks for every piece. If each group gives a plain vector, <code>unlist()</code> combines them in one call.</p>
+<pre class="r"><code>pieces_df &lt;- lapply(split(df, f), function(piece) data.frame(m = mean(piece$x)))
+pieces_vec &lt;- lapply(split.default(df$x, f), mean)
+bench::mark(
+  rbind = do.call(rbind, pieces_df)$m,
+  unlist = unlist(pieces_vec, use.names = FALSE)
+)[, c(&quot;expression&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &lt;bch:expr&gt; &lt;bch:tm&gt; &lt;bch:byt&gt;
+# 1 rbind        7.11ms  267.74KB
+# 2 unlist       7.38us    7.86KB</code></pre>
+<p>With 1,000 one row pieces, <code>unlist()</code> is about 1,000 times faster. Of course <code>unlist()</code> drops attributes, so factors
+and dates need a little extra care, but for plain numbers and characters this is all it takes.</p>
+</div>
+<div id="tip-5-put-the-rows-back-with-one-permutation" class="section level1">
+<h1>Tip 5: Put the Rows Back With One Permutation</h1>
+<p>After the combine, the results are in group order: all of group 1, then all of group 2 and so on. <code>mutate()</code> has to
+return them in the original row order. <code>unlist(rows)</code> tells us which row each result belongs to, and writing
+<code>seq_along(rows)</code> into those positions turns that around, giving the position of each row’s result.</p>
+<pre class="r"><code>rows &lt;- unlist(split.default(seq_along(shop_id), shop_id), use.names = FALSE)
+rows
+# [1] 1 3 6 2 5 4
+back &lt;- integer(length(rows))
+back[rows] &lt;- seq_along(rows)
+back
+# [1] 1 4 2 6 5 3</code></pre>
+<p><code>match()</code> numbered shop <code>b</code> first, so group order is the three <code>b</code> rows, then the two <code>a</code> rows, then <code>c</code>. Row 1 is
+shop <code>b</code>, so its result is 1st in group order; row 2 is shop <code>a</code>, so its result is 4th, after the three results for
+<code>b</code>; and so on. Now any result can be put back with a single subset.</p>
+<pre class="r"><code>totals &lt;- unlist(lapply(split(sales$amount, shop_id), sum), use.names = FALSE)
+by_group &lt;- rep(totals, tabulate(shop_id))
+by_group[back]
+# [1] 20 14 20  8 14 20</code></pre>
+<p><code>back</code> only has to be worked out once, and since it is used with <code>[</code>, it works for every new column whatever its type.</p>
+</div>
+<div id="tip-6-remove-the-loop-when-you-can" class="section level1">
+<h1>Tip 6: Remove the Loop When You Can</h1>
+<p>Some grouped calculations do not need a loop over the groups at all. If you know the function in advance, base R often
+has a grouped version already. The mean from our example can be done with <code>rowsum()</code>, which sums each group in C.</p>
+<pre class="r"><code>centre_rowsum &lt;- function(df) {
+  ids &lt;- match(df$g, unique(df$g))
+  df$x - (rowsum(df$x, ids, reorder = FALSE) / tabulate(ids))[ids]
+}</code></pre>
+<pre class="r"><code>res &lt;- bench::press(
+  n_groups = c(10, 1e3, 1e4),
+  {
+    set.seed(42)
+    df &lt;- data.frame(g = sample(n_groups, 1e5, replace = TRUE), x = runif(1e5))
+    bench::mark(fast = centre_fast(df), rowsum = centre_rowsum(df), iterations = 10L)
+  },
+  .quiet = TRUE
+)
+res[, c(&quot;expression&quot;, &quot;n_groups&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]
+# # A tibble: 6 x 4
+#   expression n_groups   median mem_alloc
+#   &lt;bch:expr&gt;    &lt;dbl&gt; &lt;bch:tm&gt; &lt;bch:byt&gt;
+# 1 fast             10   3.81ms    7.49MB
+# 2 rowsum           10   1.64ms    4.68MB
+# 3 fast           1000   5.55ms    7.67MB
+# 4 rowsum         1000   1.64ms    4.71MB
+# 5 fast          10000  22.65ms    6.18MB
+# 6 rowsum        10000   6.59ms    5.15MB</code></pre>
+<p>{poorman} can’t do this for <code>mutate()</code>, because it doesn’t know what the expression will be, but it can for verbs that
+don’t take an expression to evaluate for each group.</p>
+<p>My favourite example is filling missing values, as in <code>fill()</code>. Filling down means replacing each <code>NA</code> with the last
+value before it that isn’t missing. Take the position of each element, set it to 0 where the value is missing, and
+take the running maximum with <code>cummax()</code>. That gives the position of the last value that isn’t missing.</p>
+<pre class="r"><code>x &lt;- c(NA, 3, NA, NA, 5, NA)
+seq_along(x) * !is.na(x)
+# [1] 0 2 0 0 5 0
+cummax(seq_along(x) * !is.na(x))
+# [1] 0 2 2 2 5 5</code></pre>
+<p>The first element has no value before it, so it gets 0. To do this within groups, put the rows in group order and
+always count the first element of each group, missing or not. That fixes the 0, and it also stops a value leaking
+into the next group.</p>
+<pre class="r"><code>first &lt;- c(TRUE, FALSE, FALSE, TRUE, FALSE, FALSE)  # two groups: positions 1-3 and 4-6
+from &lt;- cummax(seq_along(x) * (!is.na(x) | first))
+from
+# [1] 1 2 2 4 5 5
+x[from]
+# [1] NA  3  3 NA  5  5</code></pre>
+<p>Position 4 stays <code>NA</code> rather than taking the 3 from the first group. Here is a version that splits the data and uses
+the trick inside each group, and a version that uses it once on the whole column.</p>
+<pre class="r"><code>fill_one &lt;- function(x) {
+  pos &lt;- seq_along(x)
+  x[cummax(pos * (!is.na(x) | pos == 1L))]
+}
+fill_split &lt;- function(x, ids) {
+  f &lt;- structure(ids, levels = as.character(seq_len(max(ids))), class = &quot;factor&quot;)
+  unsplit(lapply(split(x, f), fill_one), f)
+}
+fill_whole &lt;- function(x, ids) {
+  idx &lt;- order(ids)
+  sorted &lt;- ids[idx]
+  first &lt;- c(TRUE, sorted[-1L] != sorted[-length(sorted)])
+  y &lt;- x[idx]
+  out &lt;- x
+  out[idx] &lt;- y[cummax(seq_along(y) * (!is.na(y) | first))]
+  out
+}</code></pre>
+<pre class="r"><code>res &lt;- bench::press(
+  n_groups = c(10, 1e3, 1e4),
+  {
+    set.seed(42)
+    ids &lt;- match(sample(n_groups, 1e5, replace = TRUE), seq_len(n_groups))
+    z &lt;- ifelse(runif(1e5) &lt; 0.3, NA, runif(1e5))
+    bench::mark(split = fill_split(z, ids), whole = fill_whole(z, ids), iterations = 10L)
+  },
+  .quiet = TRUE
+)
+res[, c(&quot;expression&quot;, &quot;n_groups&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]
+# # A tibble: 6 x 4
+#   expression n_groups   median mem_alloc
+#   &lt;bch:expr&gt;    &lt;dbl&gt; &lt;bch:tm&gt; &lt;bch:byt&gt;
+# 1 split            10   3.64ms    7.69MB
+# 2 whole            10   1.96ms    9.16MB
+# 3 split          1000   4.91ms    8.13MB
+# 4 whole          1000   2.07ms    9.16MB
+# 5 split         10000  11.53ms    3.45MB
+# 6 whole         10000   2.09ms    9.16MB</code></pre>
+<p>Both functions use the same <code>cummax()</code> trick, so the only difference is the loop over the groups. With 10 groups
+that loop costs little, but with 10,000 groups <code>fill_whole()</code> is 5 times faster. It uses a little more memory, for the
+reordered copy of the column.</p>
+</div>
+<div id="how-poorman-puts-it-together" class="section level1">
+<h1>How {poorman} Puts It Together</h1>
+<p>So far these have been small base R functions. Here is how {poorman} uses the same tricks in its verbs.</p>
+<div id="grouped-data" class="section level2">
+<h2>Grouped data</h2>
+<p><code>group_by()</code> works out the groups once and stores them on the data as an attribute. <code>group_data()</code> shows them: one row
+per group, with the values of the grouping columns and a list column, <code>.rows</code>, of the rows in each group.</p>
+<pre class="r"><code>library(poorman)
+gs &lt;- group_by(sales, shop)
+group_data(gs)
+#   shop   .rows
+# 1    a    2, 5
+# 2    b 1, 3, 6
+# 3    c       4</code></pre>
+<p>To build this, <code>group_by()</code> numbers the rows with <code>match()</code> as in Tip 1 and splits the row numbers with a hand built
+factor as in Tip 2. The groups are then sorted by their values, which is why <code>a</code> comes first here. Every grouped verb
+reads <code>.rows</code> rather than finding the groups again.</p>
+</div>
+<div id="evaluating-an-expression-for-each-group" class="section level2">
+<h2>Evaluating an expression for each group</h2>
+<p>Take <code>mutate(gs, share = amount / sum(amount))</code>. For each group, R has to evaluate <code>amount / sum(amount)</code> with
+<code>amount</code> meaning the amounts of that group only. The base R tool for this is an environment: <code>eval(expr, env)</code>
+evaluates <code>expr</code> and looks up its variables in <code>env</code> first. So for each group, {poorman} makes a small environment
+holding that group’s piece of each column, and evaluates the expression in it. Here is that process written out by
+hand for our example.</p>
+<pre class="r"><code>expr &lt;- quote(amount / sum(amount))
+rows &lt;- group_data(gs)$.rows
+pieces &lt;- lapply(rows, function(i) sales$amount[i])
+envs &lt;- lapply(pieces, function(amount) list2env(list(amount = amount), envir = new.env(parent = globalenv())))
+results &lt;- lapply(envs, function(env) eval(expr, env))
+results
+# [[1]]
+# [1] 0.2857143 0.7142857
+# 
+# [[2]]
+# [1] 0.1 0.3 0.6
+# 
+# [[3]]
+# [1] 1</code></pre>
+<p>The parent of each environment is the environment the verb was called from, here the global environment. A variable
+that isn’t a column, such as a <code>total</code> defined in your own function, isn’t found in the group’s environment, so R
+looks for it in the parent, just as it would outside of {poorman}.</p>
+<p>The results are then combined with one <code>unlist()</code> (Tip 4) and put back in row order with one permutation (Tip 5).</p>
+<pre class="r"><code>idx &lt;- unlist(rows)
+back &lt;- integer(length(idx))
+back[idx] &lt;- seq_along(idx)
+unlist(results)[back]
+# [1] 0.1000000 0.2857143 0.3000000 1.0000000 0.7142857 0.6000000
+mutate(gs, share = amount / sum(amount))$share
+# [1] 0.1000000 0.2857143 0.3000000 1.0000000 0.7142857 0.6000000</code></pre>
+<p>That is <code>mutate()</code> in miniature. The real thing splits every column, not just <code>amount</code>, using whichever of the two
+methods in Tip 3 suits the size of the groups, and it checks that each result has the right size and type, but the
+steps are the same. <code>summarise()</code>, <code>mutate()</code>, <code>transmute()</code>, <code>filter()</code> and <code>slice()</code> all share one internal
+function that does this. Making one environment per group and evaluating the expressions in it is almost all of the
+work it does for each group; everything else is done once for all groups.</p>
+</div>
+<div id="building-only-what-is-used" class="section level2">
+<h2>Building only what is used</h2>
+<p>Like {dplyr}, {poorman} lets you refer to the columns of the current group through <code>.data</code>. This is useful when the
+name of a column is stored in a variable.</p>
+<pre class="r"><code>var &lt;- &quot;amount&quot;
+mutate(gs, double = .data[[var]] * 2)
+#   shop day amount double
+# 1    b   1      2      4
+# 2    a   1      4      8
+# 3    b   2      6     12
+# 4    c   1      8     16
+# 5    a   1     10     20
+# 6    b   2     12     24</code></pre>
+<p>For this to work, every group’s environment needs a variable called <code>.data</code> holding that group’s columns as a
+<code>data.frame</code>. Building a <code>data.frame</code> for every group is exactly the cost that we have been trying to avoid, and most
+expressions never use <code>.data</code>. So {poorman} only builds it when an expression reads it, using an <em>active binding</em>.
+<code>makeActiveBinding()</code> creates a variable that holds a function rather than a value, and runs that function each time
+the variable is read. Here is an environment for one group, where <code>.data</code> prints a message each time it is built.</p>
+<pre class="r"><code>env &lt;- list2env(list(amount = c(4, 10)), envir = new.env())
+makeActiveBinding(&quot;.data&quot;, function() {
+  cat(&quot;Building .data\n&quot;)
+  data.frame(amount = env$amount)
+}, env)
+eval(quote(sum(amount)), env)
+# [1] 14
+eval(quote(sum(.data[[&quot;amount&quot;]])), env)
+# Building .data
+# [1] 14</code></pre>
+<p>The first expression never reads <code>.data</code>, so the <code>data.frame</code> is never built. The second reads it, and only then is it
+built.</p>
+</div>
+<div id="subsetting-once-in-filter" class="section level2">
+<h2>Subsetting once in <code>filter()</code></h2>
+<p><code>filter()</code> evaluates its condition in each group’s environment in the same way, which gives a logical vector for each
+group. These are combined and put back in row order exactly like the results of <code>mutate()</code>, which gives one logical
+vector, <code>keep</code>, for all of the rows. The data is then subset once with it. The old approach subset each group’s
+<code>data.frame</code> and bound the pieces back together.</p>
+<p>The result is still grouped, and its groups don’t need to be found again. Filtering doesn’t change the values of the
+grouping columns, it only removes rows, so only the row numbers in <code>.rows</code> change. The new number of each row that is
+kept is <code>cumsum(keep)</code> at that row. Take the condition <code>amount &gt; 4</code>.</p>
+<pre class="r"><code>keep &lt;- sales$amount &gt; 4
+keep
+# [1] FALSE FALSE  TRUE  TRUE  TRUE  TRUE
+cumsum(keep)
+# [1] 0 0 1 2 3 4
+group_data(filter(gs, amount &gt; 4))
+#   shop .rows
+# 1    a     3
+# 2    b  1, 4
+# 3    c     2</code></pre>
+<p>Shop <code>b</code> had rows 1, 3 and 6. Row 1 is dropped, and rows 3 and 6 become <code>cumsum(keep)[c(3, 6)]</code>, that is rows 1 and 4
+of the result. {poorman} does this for all of the groups with one subset of <code>cumsum(keep)</code>.</p>
+</div>
+<div id="verbs-that-do-less-per-group" class="section level2">
+<h2>Verbs that do less per group</h2>
+<p><code>fill()</code> fills missing values within each group. It doesn’t evaluate an expression per group, so it doesn’t use the
+environments at all. It puts the rows in group order with <code>unlist(group_data(gs)$.rows)</code>, marks the first row of each
+group, and applies the <code>cummax()</code> trick from Tip 6 to the whole column, just as <code>fill_whole()</code> does.</p>
+<p><code>distinct()</code> evaluates its arguments like <code>mutate()</code>, so that <code>distinct(gs, d = day + 1)</code> works, but it finds the
+distinct rows without a loop over groups. The distinct values of <code>day</code> within each <code>shop</code> are just the distinct
+combinations of <code>shop</code> and <code>day</code>, so it numbers those combinations as in Tip 1 and keeps the rows where
+<code>duplicated()</code> is <code>FALSE</code>. With the <code>ids</code> for <code>shop</code> and <code>day</code> from Tip 2:</p>
+<pre class="r"><code>which(!duplicated(ids))
+# [1] 1 2 3 4
+distinct(gs, day)
+#   shop day
+# 1    b   1
+# 2    a   1
+# 3    b   2
+# 4    c   1</code></pre>
+<p><code>slice_head()</code> still loops over the groups, but only to work out the positions of the first <code>n</code> rows from <code>.rows</code>.
+That loop only handles short integer vectors, never the data or an environment, and the data is then subset once.</p>
+<pre class="r"><code>unlist(lapply(group_data(gs)$.rows, head, 2))
+# [1] 2 5 1 3 4
+slice_head(gs, n = 2)
+#   shop day amount
+# 2    a   1      4
+# 5    a   1     10
+# 1    b   1      2
+# 3    b   2      6
+# 4    c   1      8</code></pre>
+</div>
+</div>
+<div id="the-results" class="section level1">
+<h1>The Results</h1>
+<p>Here is the code I used to compare {poorman} 0.3.0, the version with these changes, with the current CRAN release,
+0.2.8. I ran it twice, in separate R sessions, once with each version installed (<code>install.packages("poorman")</code> for
+0.2.8 and <code>remotes::install_github("nathaneastwood/poorman")</code> for 0.3.0). <code>group_by()</code> times making the
+grouped data; every other line times a grouped operation on <code>gdf</code>, the data grouped by <code>g</code>.</p>
+<pre class="r"><code>library(poorman)
+res &lt;- bench::press(
+  n_groups = c(10, 1e3, 1e4),
+  {
+    set.seed(42)
+    n &lt;- 1e5
+    df &lt;- data.frame(
+      g = sample(n_groups, n, replace = TRUE),
+      x = runif(n),
+      y = sample(5L, n, replace = TRUE)
+    )
+    df$z &lt;- ifelse(runif(n) &lt; 0.3, NA, df$x)
+    gdf &lt;- group_by(df, g)
+    bench::mark(
+      group_by = group_by(df, g),
+      summarise = summarise(gdf, m = mean(x)),
+      mutate = mutate(gdf, m = x - mean(x)),
+      filter = filter(gdf, x &gt; mean(x)),
+      slice_head = slice_head(gdf, n = 2),
+      distinct = distinct(gdf, y),
+      fill = fill(gdf, z),
+      iterations = 3L,
+      check = FALSE
+    )
+  },
+  .quiet = TRUE
+)
+res[, c(&quot;expression&quot;, &quot;n_groups&quot;, &quot;median&quot;, &quot;mem_alloc&quot;)]</code></pre>
+<table>
+<colgroup>
+<col width="20%" />
+<col width="10%" />
+<col width="16%" />
+<col width="16%" />
+<col width="18%" />
+<col width="18%" />
+</colgroup>
+<thead>
+<tr>
+<th>Verb</th>
+<th align="right">Groups</th>
+<th align="right">Time, 0.2.8</th>
+<th align="right">Time, 0.3.0</th>
+<th align="right">Memory, 0.2.8</th>
+<th align="right">Memory, 0.3.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>group_by()</code></td>
+<td align="right">10</td>
+<td align="right">15.2 ms</td>
+<td align="right">2.66 ms</td>
+<td align="right">25.27 MB</td>
+<td align="right">5.82 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">1,000</td>
+<td align="right">1.53 s</td>
+<td align="right">2.87 ms</td>
+<td align="right">1.87 GB</td>
+<td align="right">5.94 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">10,000</td>
+<td align="right">15.2 s</td>
+<td align="right">5.35 ms</td>
+<td align="right">18.64 GB</td>
+<td align="right">5.83 MB</td>
+</tr>
+<tr>
+<td><code>summarise()</code></td>
+<td align="right">10</td>
+<td align="right">7.55 ms</td>
+<td align="right">2.08 ms</td>
+<td align="right">13.71 MB</td>
+<td align="right">5 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">1,000</td>
+<td align="right">174.84 ms</td>
+<td align="right">11.18 ms</td>
+<td align="right">33.49 MB</td>
+<td align="right">4.98 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">10,000</td>
+<td align="right">2.86 s</td>
+<td align="right">133.88 ms</td>
+<td align="right">1.88 GB</td>
+<td align="right">9.41 MB</td>
+</tr>
+<tr>
+<td><code>mutate()</code></td>
+<td align="right">10</td>
+<td align="right">50.8 ms</td>
+<td align="right">2.85 ms</td>
+<td align="right">64.62 MB</td>
+<td align="right">8.12 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">1,000</td>
+<td align="right">1.3 s</td>
+<td align="right">13.83 ms</td>
+<td align="right">1.95 GB</td>
+<td align="right">8.41 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">10,000</td>
+<td align="right">11.8 s</td>
+<td align="right">115.23 ms</td>
+<td align="right">18.72 GB</td>
+<td align="right">11.63 MB</td>
+</tr>
+<tr>
+<td><code>filter()</code></td>
+<td align="right">10</td>
+<td align="right">46.54 ms</td>
+<td align="right">5.91 ms</td>
+<td align="right">57.57 MB</td>
+<td align="right">13.86 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">1,000</td>
+<td align="right">1.45 s</td>
+<td align="right">19.11 ms</td>
+<td align="right">1.91 GB</td>
+<td align="right">14.25 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">10,000</td>
+<td align="right">13.89 s</td>
+<td align="right">196.36 ms</td>
+<td align="right">18.66 GB</td>
+<td align="right">17.89 MB</td>
+</tr>
+<tr>
+<td><code>slice_head()</code></td>
+<td align="right">10</td>
+<td align="right">6.27 ms</td>
+<td align="right">1.1 ms</td>
+<td align="right">10.35 MB</td>
+<td align="right">2.74 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">1,000</td>
+<td align="right">110.49 ms</td>
+<td align="right">2.54 ms</td>
+<td align="right">50.24 MB</td>
+<td align="right">2.84 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">10,000</td>
+<td align="right">3.16 s</td>
+<td align="right">17.1 ms</td>
+<td align="right">3.75 GB</td>
+<td align="right">4.49 MB</td>
+</tr>
+<tr>
+<td><code>distinct()</code></td>
+<td align="right">10</td>
+<td align="right">44.22 ms</td>
+<td align="right">7.39 ms</td>
+<td align="right">22.86 MB</td>
+<td align="right">17.79 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">1,000</td>
+<td align="right">465.29 ms</td>
+<td align="right">18.68 ms</td>
+<td align="right">120.36 MB</td>
+<td align="right">19.6 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">10,000</td>
+<td align="right">8.2 s</td>
+<td align="right">135.01 ms</td>
+<td align="right">8.08 GB</td>
+<td align="right">27.79 MB</td>
+</tr>
+<tr>
+<td><code>fill()</code></td>
+<td align="right">10</td>
+<td align="right">54.85 ms</td>
+<td align="right">2.45 ms</td>
+<td align="right">72.58 MB</td>
+<td align="right">7.76 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">1,000</td>
+<td align="right">1.28 s</td>
+<td align="right">2.63 ms</td>
+<td align="right">1.95 GB</td>
+<td align="right">7.68 MB</td>
+</tr>
+<tr>
+<td></td>
+<td align="right">10,000</td>
+<td align="right">12.38 s</td>
+<td align="right">3.25 ms</td>
+<td align="right">18.7 GB</td>
+<td align="right">8.16 MB</td>
+</tr>
+</tbody>
+</table>
+<p>0.3.0 is faster for every verb and every number of groups: between 4 and 22 times faster with 10
+groups, and between 21 and about 3,800 times faster with 10,000 groups. <code>fill()</code>, which no longer loops over groups,
+went from 12.4 seconds to 3.3 ms. Most of the old time and memory went on comparing every row with every group, as in
+Tip 1: 0.2.8 did this in <code>group_by()</code>, and every grouped verb did it again to find the groups of its result. That is
+why the old times grow so quickly with the number of groups, and why <code>mutate()</code> with 10,000 groups allocated 18.7 GB.
+It now allocates 11.6 MB.</p>
+<p>None of this needed anything outside of base R. The loop over the groups is still there where it has to be, but it is
+now the only part of the code that runs once per group.</p>
+<p>{poorman} 0.3.0 will be on CRAN soon, and then you will be able to install it with</p>
+<pre class="r"><code>install.packages(&quot;poorman&quot;)</code></pre>
+<p>Until then, you can install it from GitHub with</p>
+<pre class="r"><code>remotes::install_github(&quot;nathaneastwood/poorman&quot;)</code></pre>
+<p>As always, please report any bugs or differences from {dplyr} on
+<a href="https://github.com/nathaneastwood/poorman/issues">GitHub</a>.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//nathaneastwood-github-io.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+
+</main>
+
+      <footer class="footer">
+    
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank"><span class="inline-svg" ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M128.081 415.959c0 35.369-28.672 64.041-64.041 64.041S0 451.328 0 415.959s28.672-64.041 64.041-64.041 64.04 28.673 64.04 64.041zm175.66 47.25c-8.354-154.6-132.185-278.587-286.95-286.95C7.656 175.765 0 183.105 0 192.253v48.069c0 8.415 6.49 15.472 14.887 16.018 111.832 7.284 201.473 96.702 208.772 208.772.547 8.397 7.604 14.887 16.018 14.887h48.069c9.149.001 16.489-7.655 15.995-16.79zm144.249.288C439.596 229.677 251.465 40.445 16.503 32.01 7.473 31.686 0 38.981 0 48.016v48.068c0 8.625 6.835 15.645 15.453 15.999 191.179 7.839 344.627 161.316 352.465 352.465.353 8.618 7.373 15.453 15.999 15.453h48.068c9.034-.001 16.329-7.474 16.005-16.504z"/></svg>
+</span></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/highlight.min.js"></script>
+
+
+
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/r.min.js"></script>
+<script src="//cdn.bootcss.com/highlight.js/9.11.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-87791665-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

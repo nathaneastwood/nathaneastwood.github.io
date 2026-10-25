@@ -5,10 +5,776 @@
     <description>Recent content in rstats on Random R Ramblings</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-gb</language>
-    <lastBuildDate>Mon, 29 Mar 2021 20:12:00 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 25 Oct 2026 00:00:00 +0000</lastBuildDate>
     
         <atom:link href="/tags/rstats/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>{poorman}: Tips and Tricks for Faster Grouped Operations in base R</title>
+      <link>/2026/10/25/poorman-tips-and-tricks-for-faster-grouped-operations-in-base-r/</link>
+      <pubDate>Sun, 25 Oct 2026 00:00:00 +0000</pubDate>
+      
+      <guid>/2026/10/25/poorman-tips-and-tricks-for-faster-grouped-operations-in-base-r/</guid>
+      <description>
+
+
+&lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;When learning R, we are always told to vectorise, vectorise, vectorise. This is because R is an interpreted language.
+Every time R runs a line of R code, it has to look up each name, match the arguments of each function call and set up
+a new environment for each function it enters. A vectorised function such as &lt;code&gt;*&lt;/code&gt;, &lt;code&gt;cumsum()&lt;/code&gt; or &lt;code&gt;match()&lt;/code&gt; does that
+once and then loops over the elements in compiled code, where each step is very cheap. A &lt;code&gt;for&lt;/code&gt; loop written in R does
+it on every iteration.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;set.seed(42)
+x &amp;lt;- runif(1e5)
+loop &amp;lt;- function(x) {
+  out &amp;lt;- numeric(length(x))
+  for (i in seq_along(x)) out[i] &amp;lt;- x[i] * 2
+  out
+}
+bench::mark(loop = loop(x), vectorised = x * 2)[, c(&amp;quot;expression&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &amp;lt;bch:expr&amp;gt; &amp;lt;bch:tm&amp;gt; &amp;lt;bch:byt&amp;gt;
+# 1 loop         2.22ms     819KB
+# 2 vectorised  59.02us     781KB&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The loop gives the same answer and uses the same memory, but it is nearly 40 times slower. Bear in mind that
+&lt;code&gt;lapply()&lt;/code&gt;, &lt;code&gt;vapply()&lt;/code&gt; and friends are loops too. They tidy the loop away, but each iteration still calls an R
+function, so what matters is how many times we go round and how much work we do each time.&lt;/p&gt;
+&lt;p&gt;Grouped operations make this advice tricky to follow. &lt;code&gt;mutate(df, y = x - mean(x))&lt;/code&gt; on grouped data means “evaluate
+&lt;code&gt;x - mean(x)&lt;/code&gt; for each group”, and since the expression can be any R code at all, there is no way around evaluating it
+once per group. What we can do is make everything around that loop vectorised, and keep the work inside it to a
+minimum.&lt;/p&gt;
+&lt;p&gt;{poorman} has not always done this. When I &lt;a href=&#34;https://nathaneastwood.github.io/2020/02/27/building-a-base-dplyr-with-primitives-grouped-operations-pipes-and-more/&#34;&gt;first wrote about grouped operations in
+{poorman}&lt;/a&gt;,
+they used the classic split-apply-combine approach: split the &lt;code&gt;data.frame&lt;/code&gt; into one &lt;code&gt;data.frame&lt;/code&gt; per group, run the
+verb on each piece and &lt;code&gt;rbind()&lt;/code&gt; the results back together. It was simple, but it was slow once there were more than a
+few hundred groups. I have since rewritten the grouped verbs, and in this post I want to share the tricks that made the
+difference. All of them are plain base R, so you can use them in your own code too.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;split-apply-combine-versus-vectorised&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Split-Apply-Combine Versus Vectorised&lt;/h1&gt;
+&lt;p&gt;To keep things concrete, let’s centre a column within groups, which is what &lt;code&gt;mutate(x = x - mean(x))&lt;/code&gt; does on grouped
+data. The split-apply-combine version is how most of us would first write it.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;centre_split &amp;lt;- function(df) {
+  df$row &amp;lt;- seq_len(nrow(df))
+  pieces &amp;lt;- split(df, df$g)
+  pieces &amp;lt;- lapply(pieces, function(piece) {
+    piece$centred &amp;lt;- piece$x - mean(piece$x)
+    piece
+  })
+  res &amp;lt;- do.call(rbind, pieces)
+  res$centred[order(res$row)]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And here is the version {poorman} has ended up with, stripped down to the bare bones.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;centre_fast &amp;lt;- function(df) {
+  ids &amp;lt;- match(df$g, unique(df$g))
+  f &amp;lt;- structure(ids, levels = as.character(seq_len(max(ids))), class = &amp;quot;factor&amp;quot;)
+  pieces &amp;lt;- split.default(df$x, f)
+  res &amp;lt;- unlist(lapply(pieces, function(x) x - mean(x)), use.names = FALSE)
+  rows &amp;lt;- unlist(split.default(seq_along(ids), f), use.names = FALSE)
+  back &amp;lt;- integer(length(rows))
+  back[rows] &amp;lt;- seq_along(rows)
+  res[back]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Both still have an &lt;code&gt;lapply()&lt;/code&gt; over the groups. The difference is what else happens. &lt;code&gt;centre_split()&lt;/code&gt; builds a
+&lt;code&gt;data.frame&lt;/code&gt; for every group, adds a column to each one and then binds them all back together. &lt;code&gt;centre_fast()&lt;/code&gt; only
+splits the one column it needs, does nothing in the loop except the calculation itself, and combines the results with
+a single &lt;code&gt;unlist()&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;To time them, I use &lt;code&gt;bench::press()&lt;/code&gt;, which runs &lt;code&gt;bench::mark()&lt;/code&gt; once for each value of &lt;code&gt;n_groups&lt;/code&gt;, on 100,000 rows.
+&lt;code&gt;bench::mark()&lt;/code&gt; also checks that both functions return the same result.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;res &amp;lt;- bench::press(
+  n_groups = c(10, 1e3, 1e4),
+  {
+    set.seed(42)
+    df &amp;lt;- data.frame(g = sample(n_groups, 1e5, replace = TRUE), x = runif(1e5))
+    bench::mark(split = centre_split(df), fast = centre_fast(df), iterations = 10L)
+  },
+  .quiet = TRUE
+)
+res[, c(&amp;quot;expression&amp;quot;, &amp;quot;n_groups&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]
+# # A tibble: 6 x 4
+#   expression n_groups   median mem_alloc
+#   &amp;lt;bch:expr&amp;gt;    &amp;lt;dbl&amp;gt; &amp;lt;bch:tm&amp;gt; &amp;lt;bch:byt&amp;gt;
+# 1 split            10  29.62ms    26.1MB
+# 2 fast             10   3.76ms    7.57MB
+# 3 split          1000  86.71ms   61.97MB
+# 4 fast           1000   6.23ms    7.67MB
+# 5 split         10000 522.85ms   55.61MB
+# 6 fast          10000  26.27ms    6.18MB&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;centre_fast()&lt;/code&gt; is about 8 times faster with 10 groups, 14 times faster with 1,000 groups and 20 times faster with
+10,000 groups, and it uses far less memory. Let’s go through the tricks one at a time. For the rest of the post, I’ll
+use this data for the timings, with 1,000 groups:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;set.seed(42)
+n &amp;lt;- 1e5
+df &amp;lt;- data.frame(g = sample(1e3, n, replace = TRUE), x = runif(n))
+g &amp;lt;- df$g&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and this small dataset to show what each trick does.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;sales &amp;lt;- data.frame(
+  shop = c(&amp;quot;b&amp;quot;, &amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;, &amp;quot;c&amp;quot;, &amp;quot;a&amp;quot;, &amp;quot;b&amp;quot;),
+  day = c(1L, 1L, 2L, 1L, 1L, 2L),
+  amount = c(2, 4, 6, 8, 10, 12)
+)
+sales
+#   shop day amount
+# 1    b   1      2
+# 2    a   1      4
+# 3    b   2      6
+# 4    c   1      8
+# 5    a   1     10
+# 6    b   2     12&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div id=&#34;tip-1-number-the-groups-with-match&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Tip 1: Number the Groups With &lt;code&gt;match()&lt;/code&gt;&lt;/h1&gt;
+&lt;p&gt;The first job is to work out which rows belong to which group. The obvious way is to compare every row with every
+group.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;lapply(unique(sales$shop), function(shop) which(sales$shop == shop))
+# [[1]]
+# [1] 1 3 6
+# 
+# [[2]]
+# [1] 2 5
+# 
+# [[3]]
+# [1] 4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;That is &lt;code&gt;n * G&lt;/code&gt; comparisons for &lt;code&gt;n&lt;/code&gt; rows and &lt;code&gt;G&lt;/code&gt; groups, and each comparison allocates a new logical vector the length
+of the data. It is much faster to give each row a group number in one go with &lt;code&gt;match()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;match(sales$shop, unique(sales$shop))
+# [1] 1 2 1 3 2 1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Each value gets the position where it first appears in &lt;code&gt;unique(sales$shop)&lt;/code&gt;, so the groups are numbered in the order
+they appear. Both &lt;code&gt;unique()&lt;/code&gt; and &lt;code&gt;match()&lt;/code&gt; hand their work to C code inside R itself (you can see the call to
+&lt;code&gt;.Internal()&lt;/code&gt; if you print &lt;code&gt;match&lt;/code&gt;), and that code uses a &lt;em&gt;hash table&lt;/em&gt;. A hash table is a lookup table where each value
+is turned into a number, its hash, which says where in the table the value is stored. Looking a value up then means
+working out its hash and checking that one place, rather than searching the whole table, so it takes about the same
+time however many values are stored. &lt;code&gt;unique()&lt;/code&gt; goes through the vector once and adds each value it hasn’t seen
+before to a table; &lt;code&gt;match()&lt;/code&gt; puts the values of &lt;code&gt;unique(sales$shop)&lt;/code&gt; in a table and looks up each element of
+&lt;code&gt;sales$shop&lt;/code&gt; in it. Either way, each row is looked at once, whatever the number of groups.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;bench::mark(
+  compare = lapply(unique(g), function(value) which(g == value)),
+  match = match(g, unique(g)),
+  check = FALSE
+)[, c(&amp;quot;expression&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &amp;lt;bch:expr&amp;gt; &amp;lt;bch:tm&amp;gt; &amp;lt;bch:byt&amp;gt;
+# 1 compare       162ms  764.87MB
+# 2 match         653us    2.16MB&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;(&lt;code&gt;check = FALSE&lt;/code&gt; is needed here because the two give their answers in different forms; Tip 2 turns the group numbers
+into the rows of each group.)&lt;/p&gt;
+&lt;p&gt;With more than one grouping column, we need a number for each &lt;em&gt;combination&lt;/em&gt; of values. The original version of
+{poorman} used base R’s &lt;code&gt;interaction()&lt;/code&gt; for this, which builds a label for each row by pasting the values together
+with a &lt;code&gt;&#34;.&#34;&lt;/code&gt;. Unfortunately, pasting can give two different groups the same label.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;interaction(c(&amp;quot;a.b&amp;quot;, &amp;quot;a&amp;quot;), c(&amp;quot;c&amp;quot;, &amp;quot;b.c&amp;quot;))
+# [1] a.b.c a.b.c
+# Levels: a.b.c a.b.b.c a.c&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;(&#34;a.b&#34;, &#34;c&#34;)&lt;/code&gt; and &lt;code&gt;(&#34;a&#34;, &#34;b.c&#34;)&lt;/code&gt; are different groups, but both become &lt;code&gt;a.b.c&lt;/code&gt;. &lt;code&gt;interaction()&lt;/code&gt; also makes a level
+for every possible combination of values, whether or not it appears in the data, which can use a lot of memory with
+several columns. Instead, I number each column with &lt;code&gt;match()&lt;/code&gt; and combine the numbers with a little arithmetic, a bit
+like turning two digits into one number.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;shop_id &amp;lt;- match(sales$shop, unique(sales$shop))
+day_id &amp;lt;- match(sales$day, unique(sales$day))
+combined &amp;lt;- (shop_id - 1) * max(day_id) + day_id
+combined
+# [1] 1 3 2 5 3 2
+match(combined, unique(combined))
+# [1] 1 2 3 4 2 3&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Each &lt;code&gt;(shop, day)&lt;/code&gt; pair gets its own number, so no two groups can collide. Calling &lt;code&gt;match()&lt;/code&gt; again on the combined
+number brings the ids back down to &lt;code&gt;1, 2, ..., G&lt;/code&gt;, so they stay small when there are more columns to add. The &lt;code&gt;- 1&lt;/code&gt; is
+a double, so the arithmetic is done in doubles and can’t overflow R’s integers.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;tip-2-build-factors-by-hand&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Tip 2: Build Factors by Hand&lt;/h1&gt;
+&lt;p&gt;Given the group ids, &lt;code&gt;split()&lt;/code&gt; gives us the rows of each group. But &lt;code&gt;split()&lt;/code&gt; wants a factor, and calling &lt;code&gt;factor(ids)&lt;/code&gt;
+would sort the unique values and &lt;code&gt;match()&lt;/code&gt; every value against them again: work we have already done. The ids are
+already the integer codes &lt;code&gt;1:G&lt;/code&gt;, so I attach the &lt;code&gt;levels&lt;/code&gt; and &lt;code&gt;class&lt;/code&gt; attributes directly with &lt;code&gt;structure()&lt;/code&gt; and have a
+valid factor at no cost.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;ids &amp;lt;- match(combined, unique(combined))
+f &amp;lt;- structure(ids, levels = as.character(seq_len(max(ids))), class = &amp;quot;factor&amp;quot;)
+f
+# [1] 1 2 3 4 2 3
+# Levels: 1 2 3 4
+split.default(seq_along(ids), f)
+# $`1`
+# [1] 1
+# 
+# $`2`
+# [1] 2 5
+# 
+# $`3`
+# [1] 3 6
+# 
+# $`4`
+# [1] 4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;On 100,000 rows with 1,000 groups, this is 4 times faster than going through &lt;code&gt;factor()&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;ids &amp;lt;- match(g, unique(g))
+bench::mark(
+  factor = split(seq_along(ids), factor(ids)),
+  structure = split(seq_along(ids), structure(ids, levels = as.character(seq_len(max(ids))), class = &amp;quot;factor&amp;quot;))
+)[, c(&amp;quot;expression&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &amp;lt;bch:expr&amp;gt; &amp;lt;bch:tm&amp;gt; &amp;lt;bch:byt&amp;gt;
+# 1 factor       5.63ms     4.2MB
+# 2 structure    1.28ms     1.2MB&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This only works because the ids are whole numbers from 1 to &lt;code&gt;G&lt;/code&gt; with no gaps, which &lt;code&gt;match()&lt;/code&gt; guarantees.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;tip-3-split-columns-not-data.frames&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Tip 3: Split Columns, Not &lt;code&gt;data.frame&lt;/code&gt;s&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;split()&lt;/code&gt; on a &lt;code&gt;data.frame&lt;/code&gt; calls &lt;code&gt;[.data.frame&lt;/code&gt; once for each group. &lt;code&gt;[.data.frame&lt;/code&gt; is a long R function that has to
+handle every way of indexing a &lt;code&gt;data.frame&lt;/code&gt; and checks the row names every time. Splitting each column on its own
+avoids all of that.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;f &amp;lt;- structure(ids, levels = as.character(seq_len(max(ids))), class = &amp;quot;factor&amp;quot;)
+bench::mark(
+  data_frame = split(df, f),
+  columns = lapply(df, split.default, f),
+  check = FALSE
+)[, c(&amp;quot;expression&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &amp;lt;bch:expr&amp;gt; &amp;lt;bch:tm&amp;gt; &amp;lt;bch:byt&amp;gt;
+# 1 data_frame  13.01ms     3.9MB
+# 2 columns      2.04ms    2.02MB&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;There is a second choice to make here. If we already have the rows of each group, we can also split a column by
+indexing it once per group, &lt;code&gt;lapply(rows, function(i) x[i])&lt;/code&gt;. Which is faster depends on the size of the groups.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;res &amp;lt;- bench::press(
+  n_groups = c(100, 1e3, 3e3, 1e4),
+  {
+    set.seed(42)
+    x &amp;lt;- runif(1e5)
+    ids &amp;lt;- match(sample(n_groups, 1e5, replace = TRUE), seq_len(n_groups))
+    f &amp;lt;- structure(ids, levels = as.character(seq_len(n_groups)), class = &amp;quot;factor&amp;quot;)
+    rows &amp;lt;- split.default(seq_along(x), f)
+    bench::mark(index = lapply(rows, function(i) x[i]), split = split.default(x, f), check = FALSE)
+  },
+  .quiet = TRUE
+)
+res[, c(&amp;quot;expression&amp;quot;, &amp;quot;n_groups&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]
+# # A tibble: 8 x 4
+#   expression n_groups   median mem_alloc
+#   &amp;lt;bch:expr&amp;gt;    &amp;lt;dbl&amp;gt; &amp;lt;bch:tm&amp;gt; &amp;lt;bch:byt&amp;gt;
+# 1 index           100 232.35us  786.77KB
+# 2 split           100 964.07us    1.15MB
+# 3 index          1000 526.28us  835.98KB
+# 4 split          1000   1.02ms     1.2MB
+# 5 index          3000    1.1ms  944.86KB
+# 6 split          3000    1.1ms    1.32MB
+# 7 index         10000    2.9ms  131.44KB
+# 8 split         10000   1.18ms  561.22KB&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;split.default()&lt;/code&gt; costs about 1 ms whatever the number of groups, because it always goes through the whole column.
+Indexing costs one R function call per group, so it is cheap with a few large groups and expensive with many small
+ones. The two meet at about 3,000 groups, which is about 33 rows per group, so {poorman} indexes when the groups have
+32 rows or more on average and uses &lt;code&gt;split.default()&lt;/code&gt; otherwise.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;tip-4-combine-with-one-unlist&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Tip 4: Combine With One &lt;code&gt;unlist()&lt;/code&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;do.call(rbind, pieces)&lt;/code&gt; has the same problem as splitting a &lt;code&gt;data.frame&lt;/code&gt;, but in reverse. &lt;code&gt;rbind.data.frame()&lt;/code&gt; has to
+cope with columns in a different order, factors with different levels, duplicated row names and more, and it does
+those checks for every piece. If each group gives a plain vector, &lt;code&gt;unlist()&lt;/code&gt; combines them in one call.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;pieces_df &amp;lt;- lapply(split(df, f), function(piece) data.frame(m = mean(piece$x)))
+pieces_vec &amp;lt;- lapply(split.default(df$x, f), mean)
+bench::mark(
+  rbind = do.call(rbind, pieces_df)$m,
+  unlist = unlist(pieces_vec, use.names = FALSE)
+)[, c(&amp;quot;expression&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]
+# # A tibble: 2 x 3
+#   expression   median mem_alloc
+#   &amp;lt;bch:expr&amp;gt; &amp;lt;bch:tm&amp;gt; &amp;lt;bch:byt&amp;gt;
+# 1 rbind        7.11ms  267.74KB
+# 2 unlist       7.38us    7.86KB&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;With 1,000 one row pieces, &lt;code&gt;unlist()&lt;/code&gt; is about 1,000 times faster. Of course &lt;code&gt;unlist()&lt;/code&gt; drops attributes, so factors
+and dates need a little extra care, but for plain numbers and characters this is all it takes.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;tip-5-put-the-rows-back-with-one-permutation&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Tip 5: Put the Rows Back With One Permutation&lt;/h1&gt;
+&lt;p&gt;After the combine, the results are in group order: all of group 1, then all of group 2 and so on. &lt;code&gt;mutate()&lt;/code&gt; has to
+return them in the original row order. &lt;code&gt;unlist(rows)&lt;/code&gt; tells us which row each result belongs to, and writing
+&lt;code&gt;seq_along(rows)&lt;/code&gt; into those positions turns that around, giving the position of each row’s result.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;rows &amp;lt;- unlist(split.default(seq_along(shop_id), shop_id), use.names = FALSE)
+rows
+# [1] 1 3 6 2 5 4
+back &amp;lt;- integer(length(rows))
+back[rows] &amp;lt;- seq_along(rows)
+back
+# [1] 1 4 2 6 5 3&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;match()&lt;/code&gt; numbered shop &lt;code&gt;b&lt;/code&gt; first, so group order is the three &lt;code&gt;b&lt;/code&gt; rows, then the two &lt;code&gt;a&lt;/code&gt; rows, then &lt;code&gt;c&lt;/code&gt;. Row 1 is
+shop &lt;code&gt;b&lt;/code&gt;, so its result is 1st in group order; row 2 is shop &lt;code&gt;a&lt;/code&gt;, so its result is 4th, after the three results for
+&lt;code&gt;b&lt;/code&gt;; and so on. Now any result can be put back with a single subset.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;totals &amp;lt;- unlist(lapply(split(sales$amount, shop_id), sum), use.names = FALSE)
+by_group &amp;lt;- rep(totals, tabulate(shop_id))
+by_group[back]
+# [1] 20 14 20  8 14 20&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;back&lt;/code&gt; only has to be worked out once, and since it is used with &lt;code&gt;[&lt;/code&gt;, it works for every new column whatever its type.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;tip-6-remove-the-loop-when-you-can&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;Tip 6: Remove the Loop When You Can&lt;/h1&gt;
+&lt;p&gt;Some grouped calculations do not need a loop over the groups at all. If you know the function in advance, base R often
+has a grouped version already. The mean from our example can be done with &lt;code&gt;rowsum()&lt;/code&gt;, which sums each group in C.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;centre_rowsum &amp;lt;- function(df) {
+  ids &amp;lt;- match(df$g, unique(df$g))
+  df$x - (rowsum(df$x, ids, reorder = FALSE) / tabulate(ids))[ids]
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;res &amp;lt;- bench::press(
+  n_groups = c(10, 1e3, 1e4),
+  {
+    set.seed(42)
+    df &amp;lt;- data.frame(g = sample(n_groups, 1e5, replace = TRUE), x = runif(1e5))
+    bench::mark(fast = centre_fast(df), rowsum = centre_rowsum(df), iterations = 10L)
+  },
+  .quiet = TRUE
+)
+res[, c(&amp;quot;expression&amp;quot;, &amp;quot;n_groups&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]
+# # A tibble: 6 x 4
+#   expression n_groups   median mem_alloc
+#   &amp;lt;bch:expr&amp;gt;    &amp;lt;dbl&amp;gt; &amp;lt;bch:tm&amp;gt; &amp;lt;bch:byt&amp;gt;
+# 1 fast             10   3.81ms    7.49MB
+# 2 rowsum           10   1.64ms    4.68MB
+# 3 fast           1000   5.55ms    7.67MB
+# 4 rowsum         1000   1.64ms    4.71MB
+# 5 fast          10000  22.65ms    6.18MB
+# 6 rowsum        10000   6.59ms    5.15MB&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;{poorman} can’t do this for &lt;code&gt;mutate()&lt;/code&gt;, because it doesn’t know what the expression will be, but it can for verbs that
+don’t take an expression to evaluate for each group.&lt;/p&gt;
+&lt;p&gt;My favourite example is filling missing values, as in &lt;code&gt;fill()&lt;/code&gt;. Filling down means replacing each &lt;code&gt;NA&lt;/code&gt; with the last
+value before it that isn’t missing. Take the position of each element, set it to 0 where the value is missing, and
+take the running maximum with &lt;code&gt;cummax()&lt;/code&gt;. That gives the position of the last value that isn’t missing.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;x &amp;lt;- c(NA, 3, NA, NA, 5, NA)
+seq_along(x) * !is.na(x)
+# [1] 0 2 0 0 5 0
+cummax(seq_along(x) * !is.na(x))
+# [1] 0 2 2 2 5 5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The first element has no value before it, so it gets 0. To do this within groups, put the rows in group order and
+always count the first element of each group, missing or not. That fixes the 0, and it also stops a value leaking
+into the next group.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;first &amp;lt;- c(TRUE, FALSE, FALSE, TRUE, FALSE, FALSE)  # two groups: positions 1-3 and 4-6
+from &amp;lt;- cummax(seq_along(x) * (!is.na(x) | first))
+from
+# [1] 1 2 2 4 5 5
+x[from]
+# [1] NA  3  3 NA  5  5&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Position 4 stays &lt;code&gt;NA&lt;/code&gt; rather than taking the 3 from the first group. Here is a version that splits the data and uses
+the trick inside each group, and a version that uses it once on the whole column.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;fill_one &amp;lt;- function(x) {
+  pos &amp;lt;- seq_along(x)
+  x[cummax(pos * (!is.na(x) | pos == 1L))]
+}
+fill_split &amp;lt;- function(x, ids) {
+  f &amp;lt;- structure(ids, levels = as.character(seq_len(max(ids))), class = &amp;quot;factor&amp;quot;)
+  unsplit(lapply(split(x, f), fill_one), f)
+}
+fill_whole &amp;lt;- function(x, ids) {
+  idx &amp;lt;- order(ids)
+  sorted &amp;lt;- ids[idx]
+  first &amp;lt;- c(TRUE, sorted[-1L] != sorted[-length(sorted)])
+  y &amp;lt;- x[idx]
+  out &amp;lt;- x
+  out[idx] &amp;lt;- y[cummax(seq_along(y) * (!is.na(y) | first))]
+  out
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;res &amp;lt;- bench::press(
+  n_groups = c(10, 1e3, 1e4),
+  {
+    set.seed(42)
+    ids &amp;lt;- match(sample(n_groups, 1e5, replace = TRUE), seq_len(n_groups))
+    z &amp;lt;- ifelse(runif(1e5) &amp;lt; 0.3, NA, runif(1e5))
+    bench::mark(split = fill_split(z, ids), whole = fill_whole(z, ids), iterations = 10L)
+  },
+  .quiet = TRUE
+)
+res[, c(&amp;quot;expression&amp;quot;, &amp;quot;n_groups&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]
+# # A tibble: 6 x 4
+#   expression n_groups   median mem_alloc
+#   &amp;lt;bch:expr&amp;gt;    &amp;lt;dbl&amp;gt; &amp;lt;bch:tm&amp;gt; &amp;lt;bch:byt&amp;gt;
+# 1 split            10   3.64ms    7.69MB
+# 2 whole            10   1.96ms    9.16MB
+# 3 split          1000   4.91ms    8.13MB
+# 4 whole          1000   2.07ms    9.16MB
+# 5 split         10000  11.53ms    3.45MB
+# 6 whole         10000   2.09ms    9.16MB&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Both functions use the same &lt;code&gt;cummax()&lt;/code&gt; trick, so the only difference is the loop over the groups. With 10 groups
+that loop costs little, but with 10,000 groups &lt;code&gt;fill_whole()&lt;/code&gt; is 5 times faster. It uses a little more memory, for the
+reordered copy of the column.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;how-poorman-puts-it-together&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;How {poorman} Puts It Together&lt;/h1&gt;
+&lt;p&gt;So far these have been small base R functions. Here is how {poorman} uses the same tricks in its verbs.&lt;/p&gt;
+&lt;div id=&#34;grouped-data&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Grouped data&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;group_by()&lt;/code&gt; works out the groups once and stores them on the data as an attribute. &lt;code&gt;group_data()&lt;/code&gt; shows them: one row
+per group, with the values of the grouping columns and a list column, &lt;code&gt;.rows&lt;/code&gt;, of the rows in each group.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(poorman)
+gs &amp;lt;- group_by(sales, shop)
+group_data(gs)
+#   shop   .rows
+# 1    a    2, 5
+# 2    b 1, 3, 6
+# 3    c       4&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;To build this, &lt;code&gt;group_by()&lt;/code&gt; numbers the rows with &lt;code&gt;match()&lt;/code&gt; as in Tip 1 and splits the row numbers with a hand built
+factor as in Tip 2. The groups are then sorted by their values, which is why &lt;code&gt;a&lt;/code&gt; comes first here. Every grouped verb
+reads &lt;code&gt;.rows&lt;/code&gt; rather than finding the groups again.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;evaluating-an-expression-for-each-group&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Evaluating an expression for each group&lt;/h2&gt;
+&lt;p&gt;Take &lt;code&gt;mutate(gs, share = amount / sum(amount))&lt;/code&gt;. For each group, R has to evaluate &lt;code&gt;amount / sum(amount)&lt;/code&gt; with
+&lt;code&gt;amount&lt;/code&gt; meaning the amounts of that group only. The base R tool for this is an environment: &lt;code&gt;eval(expr, env)&lt;/code&gt;
+evaluates &lt;code&gt;expr&lt;/code&gt; and looks up its variables in &lt;code&gt;env&lt;/code&gt; first. So for each group, {poorman} makes a small environment
+holding that group’s piece of each column, and evaluates the expression in it. Here is that process written out by
+hand for our example.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;expr &amp;lt;- quote(amount / sum(amount))
+rows &amp;lt;- group_data(gs)$.rows
+pieces &amp;lt;- lapply(rows, function(i) sales$amount[i])
+envs &amp;lt;- lapply(pieces, function(amount) list2env(list(amount = amount), envir = new.env(parent = globalenv())))
+results &amp;lt;- lapply(envs, function(env) eval(expr, env))
+results
+# [[1]]
+# [1] 0.2857143 0.7142857
+# 
+# [[2]]
+# [1] 0.1 0.3 0.6
+# 
+# [[3]]
+# [1] 1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The parent of each environment is the environment the verb was called from, here the global environment. A variable
+that isn’t a column, such as a &lt;code&gt;total&lt;/code&gt; defined in your own function, isn’t found in the group’s environment, so R
+looks for it in the parent, just as it would outside of {poorman}.&lt;/p&gt;
+&lt;p&gt;The results are then combined with one &lt;code&gt;unlist()&lt;/code&gt; (Tip 4) and put back in row order with one permutation (Tip 5).&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;idx &amp;lt;- unlist(rows)
+back &amp;lt;- integer(length(idx))
+back[idx] &amp;lt;- seq_along(idx)
+unlist(results)[back]
+# [1] 0.1000000 0.2857143 0.3000000 1.0000000 0.7142857 0.6000000
+mutate(gs, share = amount / sum(amount))$share
+# [1] 0.1000000 0.2857143 0.3000000 1.0000000 0.7142857 0.6000000&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;That is &lt;code&gt;mutate()&lt;/code&gt; in miniature. The real thing splits every column, not just &lt;code&gt;amount&lt;/code&gt;, using whichever of the two
+methods in Tip 3 suits the size of the groups, and it checks that each result has the right size and type, but the
+steps are the same. &lt;code&gt;summarise()&lt;/code&gt;, &lt;code&gt;mutate()&lt;/code&gt;, &lt;code&gt;transmute()&lt;/code&gt;, &lt;code&gt;filter()&lt;/code&gt; and &lt;code&gt;slice()&lt;/code&gt; all share one internal
+function that does this. Making one environment per group and evaluating the expressions in it is almost all of the
+work it does for each group; everything else is done once for all groups.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;building-only-what-is-used&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Building only what is used&lt;/h2&gt;
+&lt;p&gt;Like {dplyr}, {poorman} lets you refer to the columns of the current group through &lt;code&gt;.data&lt;/code&gt;. This is useful when the
+name of a column is stored in a variable.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;var &amp;lt;- &amp;quot;amount&amp;quot;
+mutate(gs, double = .data[[var]] * 2)
+#   shop day amount double
+# 1    b   1      2      4
+# 2    a   1      4      8
+# 3    b   2      6     12
+# 4    c   1      8     16
+# 5    a   1     10     20
+# 6    b   2     12     24&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;For this to work, every group’s environment needs a variable called &lt;code&gt;.data&lt;/code&gt; holding that group’s columns as a
+&lt;code&gt;data.frame&lt;/code&gt;. Building a &lt;code&gt;data.frame&lt;/code&gt; for every group is exactly the cost that we have been trying to avoid, and most
+expressions never use &lt;code&gt;.data&lt;/code&gt;. So {poorman} only builds it when an expression reads it, using an &lt;em&gt;active binding&lt;/em&gt;.
+&lt;code&gt;makeActiveBinding()&lt;/code&gt; creates a variable that holds a function rather than a value, and runs that function each time
+the variable is read. Here is an environment for one group, where &lt;code&gt;.data&lt;/code&gt; prints a message each time it is built.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;env &amp;lt;- list2env(list(amount = c(4, 10)), envir = new.env())
+makeActiveBinding(&amp;quot;.data&amp;quot;, function() {
+  cat(&amp;quot;Building .data\n&amp;quot;)
+  data.frame(amount = env$amount)
+}, env)
+eval(quote(sum(amount)), env)
+# [1] 14
+eval(quote(sum(.data[[&amp;quot;amount&amp;quot;]])), env)
+# Building .data
+# [1] 14&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The first expression never reads &lt;code&gt;.data&lt;/code&gt;, so the &lt;code&gt;data.frame&lt;/code&gt; is never built. The second reads it, and only then is it
+built.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;subsetting-once-in-filter&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Subsetting once in &lt;code&gt;filter()&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;filter()&lt;/code&gt; evaluates its condition in each group’s environment in the same way, which gives a logical vector for each
+group. These are combined and put back in row order exactly like the results of &lt;code&gt;mutate()&lt;/code&gt;, which gives one logical
+vector, &lt;code&gt;keep&lt;/code&gt;, for all of the rows. The data is then subset once with it. The old approach subset each group’s
+&lt;code&gt;data.frame&lt;/code&gt; and bound the pieces back together.&lt;/p&gt;
+&lt;p&gt;The result is still grouped, and its groups don’t need to be found again. Filtering doesn’t change the values of the
+grouping columns, it only removes rows, so only the row numbers in &lt;code&gt;.rows&lt;/code&gt; change. The new number of each row that is
+kept is &lt;code&gt;cumsum(keep)&lt;/code&gt; at that row. Take the condition &lt;code&gt;amount &amp;gt; 4&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;keep &amp;lt;- sales$amount &amp;gt; 4
+keep
+# [1] FALSE FALSE  TRUE  TRUE  TRUE  TRUE
+cumsum(keep)
+# [1] 0 0 1 2 3 4
+group_data(filter(gs, amount &amp;gt; 4))
+#   shop .rows
+# 1    a     3
+# 2    b  1, 4
+# 3    c     2&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Shop &lt;code&gt;b&lt;/code&gt; had rows 1, 3 and 6. Row 1 is dropped, and rows 3 and 6 become &lt;code&gt;cumsum(keep)[c(3, 6)]&lt;/code&gt;, that is rows 1 and 4
+of the result. {poorman} does this for all of the groups with one subset of &lt;code&gt;cumsum(keep)&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&#34;verbs-that-do-less-per-group&#34; class=&#34;section level2&#34;&gt;
+&lt;h2&gt;Verbs that do less per group&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;fill()&lt;/code&gt; fills missing values within each group. It doesn’t evaluate an expression per group, so it doesn’t use the
+environments at all. It puts the rows in group order with &lt;code&gt;unlist(group_data(gs)$.rows)&lt;/code&gt;, marks the first row of each
+group, and applies the &lt;code&gt;cummax()&lt;/code&gt; trick from Tip 6 to the whole column, just as &lt;code&gt;fill_whole()&lt;/code&gt; does.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;distinct()&lt;/code&gt; evaluates its arguments like &lt;code&gt;mutate()&lt;/code&gt;, so that &lt;code&gt;distinct(gs, d = day + 1)&lt;/code&gt; works, but it finds the
+distinct rows without a loop over groups. The distinct values of &lt;code&gt;day&lt;/code&gt; within each &lt;code&gt;shop&lt;/code&gt; are just the distinct
+combinations of &lt;code&gt;shop&lt;/code&gt; and &lt;code&gt;day&lt;/code&gt;, so it numbers those combinations as in Tip 1 and keeps the rows where
+&lt;code&gt;duplicated()&lt;/code&gt; is &lt;code&gt;FALSE&lt;/code&gt;. With the &lt;code&gt;ids&lt;/code&gt; for &lt;code&gt;shop&lt;/code&gt; and &lt;code&gt;day&lt;/code&gt; from Tip 2:&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;which(!duplicated(ids))
+# [1] 1 2 3 4
+distinct(gs, day)
+#   shop day
+# 1    b   1
+# 2    a   1
+# 3    b   2
+# 4    c   1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;slice_head()&lt;/code&gt; still loops over the groups, but only to work out the positions of the first &lt;code&gt;n&lt;/code&gt; rows from &lt;code&gt;.rows&lt;/code&gt;.
+That loop only handles short integer vectors, never the data or an environment, and the data is then subset once.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;unlist(lapply(group_data(gs)$.rows, head, 2))
+# [1] 2 5 1 3 4
+slice_head(gs, n = 2)
+#   shop day amount
+# 2    a   1      4
+# 5    a   1     10
+# 1    b   1      2
+# 3    b   2      6
+# 4    c   1      8&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&#34;the-results&#34; class=&#34;section level1&#34;&gt;
+&lt;h1&gt;The Results&lt;/h1&gt;
+&lt;p&gt;Here is the code I used to compare {poorman} 0.3.0, the version with these changes, with the current CRAN release,
+0.2.8. I ran it twice, in separate R sessions, once with each version installed (&lt;code&gt;install.packages(&#34;poorman&#34;)&lt;/code&gt; for
+0.2.8 and &lt;code&gt;remotes::install_github(&#34;nathaneastwood/poorman&#34;)&lt;/code&gt; for 0.3.0). &lt;code&gt;group_by()&lt;/code&gt; times making the
+grouped data; every other line times a grouped operation on &lt;code&gt;gdf&lt;/code&gt;, the data grouped by &lt;code&gt;g&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(poorman)
+res &amp;lt;- bench::press(
+  n_groups = c(10, 1e3, 1e4),
+  {
+    set.seed(42)
+    n &amp;lt;- 1e5
+    df &amp;lt;- data.frame(
+      g = sample(n_groups, n, replace = TRUE),
+      x = runif(n),
+      y = sample(5L, n, replace = TRUE)
+    )
+    df$z &amp;lt;- ifelse(runif(n) &amp;lt; 0.3, NA, df$x)
+    gdf &amp;lt;- group_by(df, g)
+    bench::mark(
+      group_by = group_by(df, g),
+      summarise = summarise(gdf, m = mean(x)),
+      mutate = mutate(gdf, m = x - mean(x)),
+      filter = filter(gdf, x &amp;gt; mean(x)),
+      slice_head = slice_head(gdf, n = 2),
+      distinct = distinct(gdf, y),
+      fill = fill(gdf, z),
+      iterations = 3L,
+      check = FALSE
+    )
+  },
+  .quiet = TRUE
+)
+res[, c(&amp;quot;expression&amp;quot;, &amp;quot;n_groups&amp;quot;, &amp;quot;median&amp;quot;, &amp;quot;mem_alloc&amp;quot;)]&lt;/code&gt;&lt;/pre&gt;
+&lt;table&gt;
+&lt;colgroup&gt;
+&lt;col width=&#34;20%&#34; /&gt;
+&lt;col width=&#34;10%&#34; /&gt;
+&lt;col width=&#34;16%&#34; /&gt;
+&lt;col width=&#34;16%&#34; /&gt;
+&lt;col width=&#34;18%&#34; /&gt;
+&lt;col width=&#34;18%&#34; /&gt;
+&lt;/colgroup&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Verb&lt;/th&gt;
+&lt;th align=&#34;right&#34;&gt;Groups&lt;/th&gt;
+&lt;th align=&#34;right&#34;&gt;Time, 0.2.8&lt;/th&gt;
+&lt;th align=&#34;right&#34;&gt;Time, 0.3.0&lt;/th&gt;
+&lt;th align=&#34;right&#34;&gt;Memory, 0.2.8&lt;/th&gt;
+&lt;th align=&#34;right&#34;&gt;Memory, 0.3.0&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;group_by()&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;15.2 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.66 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;25.27 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;5.82 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.53 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.87 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.87 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;5.94 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;15.2 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;5.35 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;18.64 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;5.83 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;summarise()&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;7.55 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.08 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;13.71 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;5 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;174.84 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;11.18 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;33.49 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;4.98 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.86 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;133.88 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.88 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;9.41 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;mutate()&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;50.8 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.85 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;64.62 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;8.12 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.3 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;13.83 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.95 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;8.41 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;11.8 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;115.23 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;18.72 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;11.63 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;filter()&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;46.54 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;5.91 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;57.57 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;13.86 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.45 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;19.11 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.91 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;14.25 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;13.89 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;196.36 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;18.66 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;17.89 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;slice_head()&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;6.27 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.1 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10.35 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.74 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;110.49 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.54 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;50.24 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.84 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;3.16 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;17.1 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;3.75 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;4.49 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;distinct()&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;44.22 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;7.39 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;22.86 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;17.79 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;465.29 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;18.68 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;120.36 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;19.6 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;8.2 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;135.01 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;8.08 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;27.79 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;fill()&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;54.85 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.45 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;72.58 MB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;7.76 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.28 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;2.63 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;1.95 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;7.68 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;10,000&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;12.38 s&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;3.25 ms&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;18.7 GB&lt;/td&gt;
+&lt;td align=&#34;right&#34;&gt;8.16 MB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;0.3.0 is faster for every verb and every number of groups: between 4 and 22 times faster with 10
+groups, and between 21 and about 3,800 times faster with 10,000 groups. &lt;code&gt;fill()&lt;/code&gt;, which no longer loops over groups,
+went from 12.4 seconds to 3.3 ms. Most of the old time and memory went on comparing every row with every group, as in
+Tip 1: 0.2.8 did this in &lt;code&gt;group_by()&lt;/code&gt;, and every grouped verb did it again to find the groups of its result. That is
+why the old times grow so quickly with the number of groups, and why &lt;code&gt;mutate()&lt;/code&gt; with 10,000 groups allocated 18.7 GB.
+It now allocates 11.6 MB.&lt;/p&gt;
+&lt;p&gt;None of this needed anything outside of base R. The loop over the groups is still there where it has to be, but it is
+now the only part of the code that runs once per group.&lt;/p&gt;
+&lt;p&gt;{poorman} 0.3.0 will be on CRAN soon, and then you will be able to install it with&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;install.packages(&amp;quot;poorman&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Until then, you can install it from GitHub with&lt;/p&gt;
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;remotes::install_github(&amp;quot;nathaneastwood/poorman&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As always, please report any bugs or differences from {dplyr} on
+&lt;a href=&#34;https://github.com/nathaneastwood/poorman/issues&#34;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+</description>
+    </item>
     
     <item>
       <title>{poorman}: Version 0.2.5 Release</title>
@@ -1514,6 +2280,7 @@ How would you write this in base R?&lt;br&gt;&lt;br&gt;mtcars %&amp;gt;% &lt;br&
       
       <guid>/2020/02/25/including-function-factories-in-an-r-package-using-collate/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
@@ -1604,6 +2371,7 @@ NULL&lt;/code&gt;&lt;/pre&gt;
       
       <guid>/2020/02/15/building-a-base-dplyr-with-primitives/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
@@ -1844,7 +2612,7 @@ mtcars %&amp;gt;% transmute(mpg2 = mpg * 2, cyl2 = cyl * 2)
 &lt;div id=&#34;chaining&#34; class=&#34;section level2&#34;&gt;
 &lt;h2&gt;Chaining&lt;/h2&gt;
 &lt;p&gt;As a final note, it should be clear that due to the nature of &lt;code&gt;magrittr&lt;/code&gt;, your standard chaining of functions will still work.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% 
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;%
   filter(cyl == 4) %&amp;gt;%
   select(mpg, cyl, wt, disp)
 #                 mpg cyl    wt  disp
@@ -1957,6 +2725,7 @@ mtcars %&amp;gt;% transmute(mpg2 = mpg * 2, cyl2 = cyl * 2)
       
       <guid>/2020/02/01/get-and-set-list-elements-with-magrittr/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
@@ -2084,20 +2853,18 @@ z1
       
       <guid>/2019/09/22/selecting-the-max-value-from-each-group-a-case-study-dplyr-and-sparklyr/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/htmlwidgets/htmlwidgets.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/jquery/jquery.min.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/proj4js/proj4.js&#34;&gt;&lt;/script&gt;
 &lt;link href=&#34;/rmarkdown-libs/highcharts/css/motion.css&#34; rel=&#34;stylesheet&#34; /&gt;
-&lt;link href=&#34;/rmarkdown-libs/highcharts/css/htmlwdgtgrid.css&#34; rel=&#34;stylesheet&#34; /&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-3d.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-more.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/stock.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/map.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/annotations.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/boost.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/data.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drag-panes.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drilldown.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/item-series.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/offline-exporting.js&#34;&gt;&lt;/script&gt;
@@ -2108,6 +2875,8 @@ z1
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/heatmap.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/treemap.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sankey.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/dependency-wheel.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/organization.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/solid-gauge.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/streamgraph.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sunburst.js&#34;&gt;&lt;/script&gt;
@@ -2119,12 +2888,14 @@ z1
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/gantt.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/timeline.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/parallel-coordinates.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/grouped-categories.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/bullet.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/coloraxis.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/dumbbell.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/lollipop.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/series-label.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/motion.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/multicolor_series.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/custom/reset.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/symbols-extra.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/text-symbols.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/boost.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highchart-binding/highchart.js&#34;&gt;&lt;/script&gt;
 
 
@@ -2136,8 +2907,8 @@ z1
 &lt;h1&gt;dplyr&lt;/h1&gt;
 &lt;p&gt;First, let’s take a look at our data.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;library(dplyr)
-mtcars &amp;lt;- mtcars %&amp;gt;% 
-  tibble::rownames_to_column(var = &amp;quot;car&amp;quot;) %&amp;gt;% 
+mtcars &amp;lt;- mtcars %&amp;gt;%
+  tibble::rownames_to_column(var = &amp;quot;car&amp;quot;) %&amp;gt;%
   tibble::as_tibble()
 mtcars
 # # A tibble: 32 x 12
@@ -2155,10 +2926,10 @@ mtcars
 # 10 Merc 280     19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
 # # … with 22 more rows&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;So here, we are interested in getting a single car from each &lt;code&gt;cyl&lt;/code&gt; group whose &lt;code&gt;mpg&lt;/code&gt; is at the maximum for that group. I really like the &lt;code&gt;dplyr&lt;/code&gt; syntax for this problem, it’s really straight forward; take a look below:&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% 
-  group_by(cyl) %&amp;gt;% 
-  arrange(desc(mpg)) %&amp;gt;% 
-  slice(1) %&amp;gt;% 
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;%
+  group_by(cyl) %&amp;gt;%
+  arrange(desc(mpg)) %&amp;gt;%
+  slice(1) %&amp;gt;%
   ungroup()
 # # A tibble: 3 x 12
 #   car            mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
@@ -2167,12 +2938,12 @@ mtcars
 # 2 Hornet 4 Dr…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
 # 3 Pontiac Fir…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;We tell &lt;code&gt;dplyr&lt;/code&gt; to create groups of data for each of the &lt;code&gt;cyl&lt;/code&gt; levels and then within each group we &lt;code&gt;arrange()&lt;/code&gt; by &lt;code&gt;mpg&lt;/code&gt; in descending order. Once we have our data organised in this way it’s as simple as taking the top row from each group using &lt;code&gt;slice()&lt;/code&gt;. Of course there is more than one way we can achieve this task using &lt;code&gt;dplyr&lt;/code&gt;, take this next example for instance.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;% 
-  group_by(cyl) %&amp;gt;% 
-  arrange(desc(mpg)) %&amp;gt;% 
-  mutate(row_number = row_number()) %&amp;gt;% 
-  filter(row_number == 1) %&amp;gt;% 
-  select(-row_number) %&amp;gt;% 
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars %&amp;gt;%
+  group_by(cyl) %&amp;gt;%
+  arrange(desc(mpg)) %&amp;gt;%
+  mutate(row_number = row_number()) %&amp;gt;%
+  filter(row_number == 1) %&amp;gt;%
+  select(-row_number) %&amp;gt;%
   ungroup()
 # # A tibble: 3 x 12
 #   car            mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
@@ -2183,7 +2954,7 @@ mtcars
 &lt;p&gt;It might not seem to be the most logical approach to this problem given we have access to the &lt;code&gt;slice()&lt;/code&gt; function but it feeds nicely into the &lt;a href=&#34;#sparklyr&#34;&gt;&lt;code&gt;sparklyr&lt;/code&gt;&lt;/a&gt; section.&lt;/p&gt;
 &lt;p&gt;If you are interested, below you can see the benchmarks for these two &lt;code&gt;dplyr&lt;/code&gt; approaches. We can see that the &lt;code&gt;slice()&lt;/code&gt; approach is much quicker than the &lt;code&gt;mutate()&lt;/code&gt; approach which we would expect since there is much less manipulation of the data going on in the first approach.&lt;/p&gt;
 &lt;div id=&#34;htmlwidget-1&#34; style=&#34;width:100%;height:500px;&#34; class=&#34;highchart html-widget&#34;&gt;&lt;/div&gt;
-&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;chart&#34;:{&#34;type&#34;:&#34;column&#34;},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;slice&#34;,&#34;low&#34;:618012,&#34;q1&#34;:633643,&#34;median&#34;:647378.5,&#34;q3&#34;:784681.5,&#34;high&#34;:888473},{&#34;name&#34;:&#34;mutate&#34;,&#34;low&#34;:1567024,&#34;q1&#34;:1601592.5,&#34;median&#34;:1655655.5,&#34;q3&#34;:1982287.5,&#34;high&#34;:2232860}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;}},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
+&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;chart&#34;:{&#34;reflow&#34;:true,&#34;type&#34;:&#34;column&#34;},&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;boost&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;slice&#34;,&#34;low&#34;:5491905,&#34;q1&#34;:5767685,&#34;median&#34;:5989393,&#34;q3&#34;:6581853.5,&#34;high&#34;:7606317},{&#34;name&#34;:&#34;mutate&#34;,&#34;low&#34;:8852110,&#34;q1&#34;:9374478.5,&#34;median&#34;:9903519.5,&#34;q3&#34;:11154468,&#34;high&#34;:13646915}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;},&#34;colors&#34;:[&#34;#7cb5ec&#34;,&#34;#434348&#34;,&#34;#90ed7d&#34;,&#34;#f7a35c&#34;,&#34;#8085e9&#34;,&#34;#f15c80&#34;,&#34;#e4d354&#34;,&#34;#2b908f&#34;,&#34;#f45b5b&#34;,&#34;#91e8e1&#34;]},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
 &lt;/div&gt;
 &lt;div id=&#34;sparklyr&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;&lt;code&gt;sparklyr&lt;/code&gt;&lt;/h1&gt;
@@ -2193,43 +2964,41 @@ mtcars
 sc &amp;lt;- spark_connect(master = &amp;quot;local&amp;quot;)
 mtcars_spark &amp;lt;- copy_to(sc, mtcars, &amp;quot;mtcars&amp;quot;)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Now we can explore our first &lt;code&gt;dplyr&lt;/code&gt; example by attempting to execute it on the Spark cluster. We use &lt;code&gt;dbplyr::sql_render()&lt;/code&gt; as the final part of the chain to try and see the SQL code that &lt;code&gt;dbplyr&lt;/code&gt; translates the &lt;code&gt;dplyr&lt;/code&gt; code to.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars_spark %&amp;gt;% 
-  group_by(cyl) %&amp;gt;% 
-  arrange(desc(mpg)) %&amp;gt;% 
-  slice(1) %&amp;gt;% 
-  ungroup() %&amp;gt;% 
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars_spark %&amp;gt;%
+  group_by(cyl) %&amp;gt;%
+  arrange(desc(mpg)) %&amp;gt;%
+  slice(1) %&amp;gt;%
+  ungroup() %&amp;gt;%
   dbplyr::sql_render()
-# Error in slice_.tbl_spark(.data, .dots = compat_as_lazy_dots(...)): Slice is not supported in this version of sparklyr&lt;/code&gt;&lt;/pre&gt;
+# Error: slice() is not supported on database backends&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;In this instance, &lt;code&gt;dplyr&lt;/code&gt; tells us that we cannot use &lt;code&gt;slice()&lt;/code&gt; since it is not currently supported by &lt;code&gt;sparklyr&lt;/code&gt;, this is because there is no direct translation from &lt;code&gt;slice()&lt;/code&gt; to Spark SQL code. So let’s try our second approach.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars_spark %&amp;gt;% 
-  group_by(cyl) %&amp;gt;% 
-  arrange(desc(mpg)) %&amp;gt;% 
-  mutate(row_number = row_number()) %&amp;gt;% 
-  filter(row_number == 1) %&amp;gt;% 
-  select(-row_number) %&amp;gt;% 
-  ungroup() %&amp;gt;% 
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars_spark %&amp;gt;%
+  group_by(cyl) %&amp;gt;%
+  arrange(desc(mpg)) %&amp;gt;%
+  mutate(row_number = row_number()) %&amp;gt;%
+  filter(row_number == 1) %&amp;gt;%
+  select(-row_number) %&amp;gt;%
+  ungroup() %&amp;gt;%
   dbplyr::sql_render()
-# &amp;lt;SQL&amp;gt; SELECT `car`, `mpg`, `cyl`, `disp`, `hp`, `drat`, `wt`, `qsec`, `vs`, `am`, `gear`, `carb`
+# &amp;lt;SQL&amp;gt; SELECT `cyl`, `car`, `mpg`, `disp`, `hp`, `drat`, `wt`, `qsec`, `vs`, `am`, `gear`, `carb`
 # FROM (SELECT `car`, `mpg`, `cyl`, `disp`, `hp`, `drat`, `wt`, `qsec`, `vs`, `am`, `gear`, `carb`, ROW_NUMBER() OVER (PARTITION BY `cyl` ORDER BY `mpg` DESC) AS `row_number`
-# FROM (SELECT *
-# FROM `mtcars`
-# ORDER BY `mpg` DESC) `dbplyr_001`) `dbplyr_002`
+# FROM `mtcars`) `q01`
 # WHERE (`row_number` = 1.0)&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Here we see that the function &lt;code&gt;row_number()&lt;/code&gt; does translate; since it is a ranking function which mimics the functions described in SQL2003 (see &lt;code&gt;?ranking&lt;/code&gt;), &lt;code&gt;dbplyr&lt;/code&gt; knows the equivalent SQL code.&lt;/p&gt;
-&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars_spark %&amp;gt;% 
-  group_by(cyl) %&amp;gt;% 
-  arrange(desc(mpg)) %&amp;gt;% 
-  mutate(row_number = row_number()) %&amp;gt;% 
-  filter(row_number == 1) %&amp;gt;% 
-  select(-row_number) %&amp;gt;% 
-  ungroup() %&amp;gt;% 
+&lt;pre class=&#34;r&#34;&gt;&lt;code&gt;mtcars_spark %&amp;gt;%
+  group_by(cyl) %&amp;gt;%
+  arrange(desc(mpg)) %&amp;gt;%
+  mutate(row_number = row_number()) %&amp;gt;%
+  filter(row_number == 1) %&amp;gt;%
+  select(-row_number) %&amp;gt;%
+  ungroup() %&amp;gt;%
   collect()
 # # A tibble: 3 x 12
-#   car            mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
-#   &amp;lt;chr&amp;gt;        &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
-# 1 Hornet 4 Dr…  21.4     6 258     110  3.08  3.22  19.4     1     0     3     1
-# 2 Toyota Coro…  33.9     4  71.1    65  4.22  1.84  19.9     1     1     4     1
-# 3 Pontiac Fir…  19.2     8 400     175  3.08  3.84  17.0     0     0     3     2&lt;/code&gt;&lt;/pre&gt;
+#     cyl car            mpg  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#   &amp;lt;dbl&amp;gt; &amp;lt;chr&amp;gt;        &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt; &amp;lt;dbl&amp;gt;
+# 1     6 Hornet 4 Dr…  21.4 258     110  3.08  3.22  19.4     1     0     3     1
+# 2     4 Toyota Coro…  33.9  71.1    65  4.22  1.84  19.9     1     1     4     1
+# 3     8 Pontiac Fir…  19.2 400     175  3.08  3.84  17.0     0     0     3     2&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;So really when it comes to using &lt;code&gt;dplyr&lt;/code&gt; for data manipulation in Spark it sometimes requires some persistence in finding a function which will translate nicely to Spark SQL, especially if you don’t want to use the often slow &lt;code&gt;spark_apply()&lt;/code&gt; function to apply an R function to a Spark object. Although I would recommend reading the &lt;a href=&#34;https://spark.rstudio.com/dplyr/&#34;&gt;&lt;code&gt;sparklyr&lt;/code&gt; documentation&lt;/a&gt;, it can often be a little light on the details and so for a more detailed look at how to send R code to be executed on your Spark cluster, check out my colleague Jozef’s &lt;a href=&#34;https://jozef.io/r201-spark-r-1/#an-r-function-translated-to-spark-sql&#34;&gt;blog post&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;As a side note, should you not be able to find an R function which will translate to SQL code, it is always worth checking out the list of &lt;a href=&#34;https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF&#34;&gt;Hive Operators and User-Defined Functions (UDFs)&lt;/a&gt;. UDFs are functions that are built for specific purposes to perform operations like Mathematical, arithmetic, logical and relational on the operands of table column names.&lt;/p&gt;
 &lt;/div&gt;
@@ -2247,20 +3016,18 @@ mtcars_spark &amp;lt;- copy_to(sc, mtcars, &amp;quot;mtcars&amp;quot;)&lt;/code&
       
       <guid>/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-data.table/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/htmlwidgets/htmlwidgets.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/jquery/jquery.min.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/proj4js/proj4.js&#34;&gt;&lt;/script&gt;
 &lt;link href=&#34;/rmarkdown-libs/highcharts/css/motion.css&#34; rel=&#34;stylesheet&#34; /&gt;
-&lt;link href=&#34;/rmarkdown-libs/highcharts/css/htmlwdgtgrid.css&#34; rel=&#34;stylesheet&#34; /&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-3d.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-more.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/stock.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/map.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/annotations.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/boost.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/data.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drag-panes.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drilldown.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/item-series.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/offline-exporting.js&#34;&gt;&lt;/script&gt;
@@ -2271,6 +3038,8 @@ mtcars_spark &amp;lt;- copy_to(sc, mtcars, &amp;quot;mtcars&amp;quot;)&lt;/code&
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/heatmap.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/treemap.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sankey.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/dependency-wheel.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/organization.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/solid-gauge.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/streamgraph.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sunburst.js&#34;&gt;&lt;/script&gt;
@@ -2282,12 +3051,14 @@ mtcars_spark &amp;lt;- copy_to(sc, mtcars, &amp;quot;mtcars&amp;quot;)&lt;/code&
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/gantt.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/timeline.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/parallel-coordinates.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/grouped-categories.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/bullet.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/coloraxis.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/dumbbell.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/lollipop.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/series-label.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/motion.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/multicolor_series.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/custom/reset.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/symbols-extra.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/text-symbols.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/boost.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highchart-binding/highchart.js&#34;&gt;&lt;/script&gt;
 
 
@@ -2334,7 +3105,7 @@ mtcars &amp;lt;- as.data.table(mtcars, keep.rownames = &amp;quot;car&amp;quot;)&
 &lt;h1&gt;Benchmarks&lt;/h1&gt;
 &lt;p&gt;Now this wouldn’t be a completely informative blog post without some benchmarks. In fact these three options are what inspired me to write this series of posts. We can see the results of the benchmarking below.&lt;/p&gt;
 &lt;div id=&#34;htmlwidget-1&#34; style=&#34;width:100%;height:500px;&#34; class=&#34;highchart html-widget&#34;&gt;&lt;/div&gt;
-&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;chart&#34;:{&#34;type&#34;:&#34;column&#34;},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;.SD&#34;,&#34;low&#34;:609765,&#34;q1&#34;:672803,&#34;median&#34;:780947,&#34;q3&#34;:908894,&#34;high&#34;:1176229},{&#34;name&#34;:&#34;.I&#34;,&#34;low&#34;:424729,&#34;q1&#34;:472479.5,&#34;median&#34;:536495,&#34;q3&#34;:606264,&#34;high&#34;:785185},{&#34;name&#34;:&#34;rbindlist&#34;,&#34;low&#34;:1013911,&#34;q1&#34;:1114113.5,&#34;median&#34;:1327455.5,&#34;q3&#34;:1592234,&#34;high&#34;:2192359}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;}},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
+&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;chart&#34;:{&#34;reflow&#34;:true,&#34;type&#34;:&#34;column&#34;},&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;boost&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;.SD&#34;,&#34;low&#34;:807804,&#34;q1&#34;:941846.5,&#34;median&#34;:1030328.5,&#34;q3&#34;:1183041.5,&#34;high&#34;:1524728},{&#34;name&#34;:&#34;.I&#34;,&#34;low&#34;:584132,&#34;q1&#34;:663341.5,&#34;median&#34;:709868,&#34;q3&#34;:826286,&#34;high&#34;:962372},{&#34;name&#34;:&#34;rbindlist&#34;,&#34;low&#34;:1382899,&#34;q1&#34;:1543384,&#34;median&#34;:1726174.5,&#34;q3&#34;:2009614,&#34;high&#34;:2688562}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;},&#34;colors&#34;:[&#34;#7cb5ec&#34;,&#34;#434348&#34;,&#34;#90ed7d&#34;,&#34;#f7a35c&#34;,&#34;#8085e9&#34;,&#34;#f15c80&#34;,&#34;#e4d354&#34;,&#34;#2b908f&#34;,&#34;#f45b5b&#34;,&#34;#91e8e1&#34;]},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
 &lt;p&gt;We can see that, on average, the &lt;code&gt;.I&lt;/code&gt; solution is fastest. So you may be wondering, if the &lt;code&gt;.SD&lt;/code&gt; syntax is the newer syntax, why then is the &lt;code&gt;.I&lt;/code&gt; code quicker? Well it’s simply because &lt;code&gt;.SD&lt;/code&gt; has &lt;a href=&#34;https://github.com/Rdatatable/data.table/issues/735&#34;&gt;not yet been completely optimised&lt;/a&gt;. &lt;code&gt;.I&lt;/code&gt; avoids constructing &lt;code&gt;.SD&lt;/code&gt;, which is the bottleneck in the &lt;code&gt;.SD&lt;/code&gt; solution.&lt;/p&gt;
 &lt;p&gt;As a side note, we could speed these results up even more with &lt;code&gt;data.table::setkey(mtcars, cyl)&lt;/code&gt;. I won’t show the benchmarking results here as the data is so small it isn’t really a useful representation but it is worth considering should you need to perform a similar task on a larger dataset.&lt;/p&gt;
 &lt;/div&gt;
@@ -2354,20 +3125,18 @@ mtcars &amp;lt;- as.data.table(mtcars, keep.rownames = &amp;quot;car&amp;quot;)&
       
       <guid>/2019/09/14/selecting-the-max-value-from-each-group-a-case-study-base-r/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/htmlwidgets/htmlwidgets.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/jquery/jquery.min.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/proj4js/proj4.js&#34;&gt;&lt;/script&gt;
 &lt;link href=&#34;/rmarkdown-libs/highcharts/css/motion.css&#34; rel=&#34;stylesheet&#34; /&gt;
-&lt;link href=&#34;/rmarkdown-libs/highcharts/css/htmlwdgtgrid.css&#34; rel=&#34;stylesheet&#34; /&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-3d.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/highcharts-more.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/stock.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/map.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/annotations.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/boost.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/data.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drag-panes.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/drilldown.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/item-series.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/offline-exporting.js&#34;&gt;&lt;/script&gt;
@@ -2378,6 +3147,8 @@ mtcars &amp;lt;- as.data.table(mtcars, keep.rownames = &amp;quot;car&amp;quot;)&
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/heatmap.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/treemap.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sankey.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/dependency-wheel.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/organization.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/solid-gauge.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/streamgraph.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/sunburst.js&#34;&gt;&lt;/script&gt;
@@ -2389,12 +3160,14 @@ mtcars &amp;lt;- as.data.table(mtcars, keep.rownames = &amp;quot;car&amp;quot;)&
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/gantt.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/timeline.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/modules/parallel-coordinates.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/grouped-categories.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/bullet.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/coloraxis.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/dumbbell.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/lollipop.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/series-label.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/motion.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/plugins/multicolor_series.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highcharts/custom/reset.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/symbols-extra.js&#34;&gt;&lt;/script&gt;
-&lt;script src=&#34;/rmarkdown-libs/highcharts/custom/text-symbols.js&#34;&gt;&lt;/script&gt;
+&lt;script src=&#34;/rmarkdown-libs/highcharts/modules/boost.js&#34;&gt;&lt;/script&gt;
 &lt;script src=&#34;/rmarkdown-libs/highchart-binding/highchart.js&#34;&gt;&lt;/script&gt;
 
 
@@ -2438,7 +3211,7 @@ max_mpg
 &lt;div id=&#34;benchmarks&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;Benchmarks&lt;/h1&gt;
 &lt;div id=&#34;htmlwidget-1&#34; style=&#34;width:100%;height:500px;&#34; class=&#34;highchart html-widget&#34;&gt;&lt;/div&gt;
-&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;chart&#34;:{&#34;type&#34;:&#34;column&#34;},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;split_lapply&#34;,&#34;low&#34;:896684,&#34;q1&#34;:937438,&#34;median&#34;:969807,&#34;q3&#34;:1014800.5,&#34;high&#34;:1099156},{&#34;name&#34;:&#34;by&#34;,&#34;low&#34;:928537,&#34;q1&#34;:968404,&#34;median&#34;:996567.5,&#34;q3&#34;:1047470,&#34;high&#34;:1145391}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;}},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
+&lt;script type=&#34;application/json&#34; data-for=&#34;htmlwidget-1&#34;&gt;{&#34;x&#34;:{&#34;hc_opts&#34;:{&#34;chart&#34;:{&#34;reflow&#34;:true,&#34;type&#34;:&#34;column&#34;},&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt;data.table Solutions&lt;b&gt;&#34;},&#34;yAxis&#34;:{&#34;title&#34;:{&#34;text&#34;:&#34;&lt;b&gt; Time (ns)&lt;b&gt;&#34;}},&#34;credits&#34;:{&#34;enabled&#34;:false},&#34;exporting&#34;:{&#34;enabled&#34;:false},&#34;boost&#34;:{&#34;enabled&#34;:false},&#34;plotOptions&#34;:{&#34;series&#34;:{&#34;label&#34;:{&#34;enabled&#34;:false},&#34;turboThreshold&#34;:0,&#34;marker&#34;:{&#34;symbol&#34;:&#34;circle&#34;},&#34;showInLegend&#34;:false},&#34;treemap&#34;:{&#34;layoutAlgorithm&#34;:&#34;squarified&#34;}},&#34;xAxis&#34;:{&#34;type&#34;:&#34;category&#34;,&#34;categories&#34;:&#34;&#34;},&#34;series&#34;:[{&#34;g2&#34;:null,&#34;data&#34;:[{&#34;name&#34;:&#34;split_lapply&#34;,&#34;low&#34;:1048436,&#34;q1&#34;:1171937,&#34;median&#34;:1287713,&#34;q3&#34;:1554482.5,&#34;high&#34;:1965389},{&#34;name&#34;:&#34;by&#34;,&#34;low&#34;:1087499,&#34;q1&#34;:1221152,&#34;median&#34;:1314044,&#34;q3&#34;:1575699.5,&#34;high&#34;:2083068}],&#34;type&#34;:&#34;boxplot&#34;,&#34;id&#34;:null,&#34;name&#34;:&#34;Solution&#34;,&#34;color&#34;:&#34;#6272a4&#34;,&#34;fillColor&#34;:&#34;#f8f8f2&#34;,&#34;lineWidth&#34;:1.5}]},&#34;theme&#34;:{&#34;chart&#34;:{&#34;backgroundColor&#34;:&#34;transparent&#34;},&#34;colors&#34;:[&#34;#7cb5ec&#34;,&#34;#434348&#34;,&#34;#90ed7d&#34;,&#34;#f7a35c&#34;,&#34;#8085e9&#34;,&#34;#f15c80&#34;,&#34;#e4d354&#34;,&#34;#2b908f&#34;,&#34;#f45b5b&#34;,&#34;#91e8e1&#34;]},&#34;conf_opts&#34;:{&#34;global&#34;:{&#34;Date&#34;:null,&#34;VMLRadialGradientURL&#34;:&#34;http =//code.highcharts.com/list(version)/gfx/vml-radial-gradient.png&#34;,&#34;canvasToolsURL&#34;:&#34;http =//code.highcharts.com/list(version)/modules/canvas-tools.js&#34;,&#34;getTimezoneOffset&#34;:null,&#34;timezoneOffset&#34;:0,&#34;useUTC&#34;:true},&#34;lang&#34;:{&#34;contextButtonTitle&#34;:&#34;Chart context menu&#34;,&#34;decimalPoint&#34;:&#34;.&#34;,&#34;downloadJPEG&#34;:&#34;Download JPEG image&#34;,&#34;downloadPDF&#34;:&#34;Download PDF document&#34;,&#34;downloadPNG&#34;:&#34;Download PNG image&#34;,&#34;downloadSVG&#34;:&#34;Download SVG vector image&#34;,&#34;drillUpText&#34;:&#34;Back to {series.name}&#34;,&#34;invalidDate&#34;:null,&#34;loading&#34;:&#34;Loading...&#34;,&#34;months&#34;:[&#34;January&#34;,&#34;February&#34;,&#34;March&#34;,&#34;April&#34;,&#34;May&#34;,&#34;June&#34;,&#34;July&#34;,&#34;August&#34;,&#34;September&#34;,&#34;October&#34;,&#34;November&#34;,&#34;December&#34;],&#34;noData&#34;:&#34;No data to display&#34;,&#34;numericSymbols&#34;:[&#34;k&#34;,&#34;M&#34;,&#34;G&#34;,&#34;T&#34;,&#34;P&#34;,&#34;E&#34;],&#34;printChart&#34;:&#34;Print chart&#34;,&#34;resetZoom&#34;:&#34;Reset zoom&#34;,&#34;resetZoomTitle&#34;:&#34;Reset zoom level 1:1&#34;,&#34;shortMonths&#34;:[&#34;Jan&#34;,&#34;Feb&#34;,&#34;Mar&#34;,&#34;Apr&#34;,&#34;May&#34;,&#34;Jun&#34;,&#34;Jul&#34;,&#34;Aug&#34;,&#34;Sep&#34;,&#34;Oct&#34;,&#34;Nov&#34;,&#34;Dec&#34;],&#34;thousandsSep&#34;:&#34; &#34;,&#34;weekdays&#34;:[&#34;Sunday&#34;,&#34;Monday&#34;,&#34;Tuesday&#34;,&#34;Wednesday&#34;,&#34;Thursday&#34;,&#34;Friday&#34;,&#34;Saturday&#34;]}},&#34;type&#34;:&#34;chart&#34;,&#34;fonts&#34;:[],&#34;debug&#34;:false},&#34;evals&#34;:[],&#34;jsHooks&#34;:[]}&lt;/script&gt;
 &lt;/div&gt;
 &lt;div id=&#34;conclusion&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;Conclusion&lt;/h1&gt;
@@ -2456,6 +3229,7 @@ max_mpg
       
       <guid>/2019/09/05/including-optional-functionality-from-other-packages-in-your-code/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
@@ -2550,6 +3324,7 @@ Exited with status 1.&lt;/code&gt;&lt;/pre&gt;
       
       <guid>/2019/08/18/no-visible-binding-for-global-variable/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;p&gt;Recently I have been working on a very large legacy project which utilises the excellent &lt;a href=&#34;https://github.com/Rdatatable/data.table&#34;&gt;&lt;code&gt;data.table&lt;/code&gt;&lt;/a&gt; package throughout. What this has resulted in is an &lt;code&gt;R CMD check&lt;/code&gt; containing literally thousands of &lt;code&gt;NOTE&lt;/code&gt;s similar to the following:&lt;/p&gt;
@@ -2598,7 +3373,7 @@ Exited with status 1.&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;You may also come across this problem whilst programming using the &lt;code&gt;tidyverse&lt;/code&gt; for which there is a very neat solution. You simply need to be more explicit within your function by using the &lt;a href=&#34;https://cran.r-project.org/web/packages/dplyr/vignettes/programming.html&#34;&gt;&lt;code&gt;.data&lt;/code&gt; pronoun&lt;/a&gt;.&lt;/p&gt;
 &lt;pre class=&#34;r&#34;&gt;&lt;code&gt;#&amp;#39; @importFrom rlang .data
 my_fn &amp;lt;- function() {
-  mtcars %&amp;gt;% 
+  mtcars %&amp;gt;%
     mutate(mpg_div_hp = .data$mpg / .data$hp)
 }&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Note the import!&lt;/p&gt;
@@ -2672,21 +3447,22 @@ my_fn &amp;lt;- function() {
     </item>
     
     <item>
-      <title>Extending sparklyr: Data Types</title>
+      <title>Extending {sparklyr}: Data Types</title>
       <link>/2018/03/08/extending-sparklyr-data-types/</link>
       <pubDate>Thu, 08 Mar 2018 21:13:14 -0500</pubDate>
       
       <guid>/2018/03/08/extending-sparklyr-data-types/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;div id=&#34;tldr&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;TL;DR&lt;/h1&gt;
-&lt;p&gt;&lt;code&gt;sparklyr&lt;/code&gt; maps R data types and data storage types to Scala, but it doesn’t handle all data storage types. This blog post discusses how to generate Scala data storage types from the R side, that are not generated by &lt;code&gt;sparklyr&lt;/code&gt;. You can do this by using the &lt;code&gt;sparklyr::invoke_new&lt;/code&gt; function to generate the objects you want in Java or Scala, for example a &lt;code&gt;java.util.ArrayList&lt;/code&gt;, and then &lt;code&gt;sparklyr::invoke&lt;/code&gt; methods of the class to add data to it, or convert it to the type you need. Read on to see how to deal with different data storage types from the Scala side or skip ahead to see how to &lt;a href=&#34;#generating-scala-data-types-from-r&#34;&gt;generate Scala data storage types from R&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;{sparklyr} maps R data types and data storage types to Scala, but it doesn’t handle all data storage types. This blog post discusses how to generate Scala data storage types from the R side, that are not generated by {sparklyr}. You can do this by using the &lt;code&gt;sparklyr::invoke_new&lt;/code&gt; function to generate the objects you want in Java or Scala, for example a &lt;code&gt;java.util.ArrayList&lt;/code&gt;, and then &lt;code&gt;sparklyr::invoke&lt;/code&gt; methods of the class to add data to it, or convert it to the type you need. Read on to see how to deal with different data storage types from the Scala side or skip ahead to see how to &lt;a href=&#34;#generating-scala-data-types-from-r&#34;&gt;generate Scala data storage types from R&lt;/a&gt;.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div id=&#34;introduction&#34; class=&#34;section level1&#34;&gt;
 &lt;h1&gt;Introduction&lt;/h1&gt;
-&lt;p&gt;When working to &lt;a href=&#34;http://spark.rstudio.com/extensions/&#34;&gt;extend&lt;/a&gt; the &lt;code&gt;sparklyr&lt;/code&gt; package, for example to call custom Scala libraries, oftentimes you will come across Scala methods which require you to use different data storage types to those automatically handled by &lt;code&gt;sparklyr&lt;/code&gt;. When using the &lt;code&gt;invoke&lt;/code&gt; family of functions, R data types map to Scala data types, but &lt;code&gt;sparklyr&lt;/code&gt; &lt;a href=&#34;https://github.com/rstudio/sparklyr/issues/1324&#34;&gt;currently&lt;/a&gt; only handles certain R data storage type mappings. The below table shows the data mappings currently handled by &lt;code&gt;sparklyr&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;When working to &lt;a href=&#34;http://spark.rstudio.com/extensions/&#34;&gt;extend&lt;/a&gt; the {sparklyr} package, for example to call custom Scala libraries, oftentimes you will come across Scala methods which require you to use different data storage types to those automatically handled by {sparklyr}. When using the &lt;code&gt;invoke&lt;/code&gt; family of functions, R data types map to Scala data types, but {sparklyr} &lt;a href=&#34;https://github.com/rstudio/sparklyr/issues/1324&#34;&gt;currently&lt;/a&gt; only handles certain R data storage type mappings. The below table shows the data mappings currently handled by {sparklyr}:&lt;/p&gt;
 &lt;table style=&#34;width:100%&#34;&gt;
 &lt;tr&gt;
 &lt;th&gt;
@@ -2737,7 +3513,7 @@ Array
 &lt;/td&gt;
 &lt;/tr&gt;
 &lt;caption&gt;
-Table 1: R to Scala type mappings available in &lt;code&gt;sparklyr&lt;/code&gt;
+Table 1: R to Scala type mappings available in {sparklyr}
 &lt;/caption&gt;
 &lt;/table&gt;
 &lt;p&gt;So Scala functions with parameters that require a &lt;code&gt;List&lt;/code&gt; or a &lt;code&gt;Seq&lt;/code&gt;, for example, need to be handled in a different way. There are two ways we can approach this problem; from the Scala side and from the R side. We will explore both approaches.&lt;/p&gt;
@@ -2757,7 +3533,7 @@ Table 1: R to Scala type mappings available in &lt;code&gt;sparklyr&lt;/code&gt;
 &lt;/div&gt;
 &lt;div id=&#34;defining-a-new-scala-class&#34; class=&#34;section level3&#34;&gt;
 &lt;h3&gt;Defining A New Scala Class&lt;/h3&gt;
-&lt;p&gt;To avoid the possible issues of overloading, we can define two separate classes, &lt;code&gt;myClass&lt;/code&gt; and &lt;code&gt;myClassR&lt;/code&gt;. These will both call upon the same underlying &lt;a href=&#34;https://docs.scala-lang.org/overviews/core/implicit-classes.html&#34;&gt;implicit&lt;/a&gt; class which does the bulk of the work for the method. The difference is the data types that are passed into &lt;code&gt;myClass&lt;/code&gt; and &lt;code&gt;myClassR&lt;/code&gt;. &lt;code&gt;myClass&lt;/code&gt; will take the data type you want to use, whereas &lt;code&gt;myClassR&lt;/code&gt; will take the data type passed to it by &lt;code&gt;sparklyr&lt;/code&gt; and then convert it before calling the implicit. Of course using this approach effectively doubles our code and is therefore very wasteful; we would also again, need to write additional tests for this new class.&lt;/p&gt;
+&lt;p&gt;To avoid the possible issues of overloading, we can define two separate classes, &lt;code&gt;myClass&lt;/code&gt; and &lt;code&gt;myClassR&lt;/code&gt;. These will both call upon the same underlying &lt;a href=&#34;https://docs.scala-lang.org/overviews/core/implicit-classes.html&#34;&gt;implicit&lt;/a&gt; class which does the bulk of the work for the method. The difference is the data types that are passed into &lt;code&gt;myClass&lt;/code&gt; and &lt;code&gt;myClassR&lt;/code&gt;. &lt;code&gt;myClass&lt;/code&gt; will take the data type you want to use, whereas &lt;code&gt;myClassR&lt;/code&gt; will take the data type passed to it by {sparklyr} and then convert it before calling the implicit. Of course using this approach effectively doubles our code and is therefore very wasteful; we would also again, need to write additional tests for this new class.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div id=&#34;solutions-from-the-r-side&#34; class=&#34;section level2&#34;&gt;
@@ -2809,7 +3585,7 @@ scala_list(sc, c(1, 2, 3))
 # disconnect the spark connection
 spark_disconnect(sc = sc)
 # NULL&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Similar results can be achieved for other data types. These new data storage types can now be used in Scala function calls when extending &lt;code&gt;sparklyr&lt;/code&gt;, we simply generate the data in the JVM and pass the reference to the function we &lt;code&gt;invoke&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Similar results can be achieved for other data types. These new data storage types can now be used in Scala function calls when extending {sparklyr}, we simply generate the data in the JVM and pass the reference to the function we &lt;code&gt;invoke&lt;/code&gt;.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
@@ -2843,6 +3619,7 @@ spark_disconnect(sc = sc)
       
       <guid>/2017/08/13/accessing-private-methods-from-an-r6-class/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;p&gt;I recently wrote a package to solve the &lt;a href=&#34;http://chrisdone.com/posts/twitter-problem-loeb&#34;&gt;Twitter Waterflow Problem&lt;/a&gt; using an &lt;code&gt;R6&lt;/code&gt; class. You can view the package &lt;a href=&#34;https://github.com/nathaneastwood/waterflow&#34;&gt;here&lt;/a&gt; and read about how I approached the problem &lt;a href=&#34;https://nathaneastwood.github.io/2017/08/09/2017-08-09-twitter-waterflow-problem/&#34;&gt;here&lt;/a&gt;. In this blog post, I want to highlight how you can access &lt;code&gt;private&lt;/code&gt; members of an &lt;code&gt;R6&lt;/code&gt; class which Winston Chang mentioned in his &lt;a href=&#34;https://channel9.msdn.com/Events/useR-international-R-User-conferences/useR-International-R-User-2017-Conference/The-R6-Class-System&#34;&gt;useR!2017 talk&lt;/a&gt;. I will use the &lt;code&gt;waterflow&lt;/code&gt; package for this example. Within the &lt;code&gt;R6&lt;/code&gt; waterflow class there is a &lt;code&gt;private&lt;/code&gt; member function, or method, that converts the data you provide the class with, and the data it calculates, into a tidy &lt;code&gt;data.frame&lt;/code&gt; used for generating a plot. However what if we already have the data that this function needs to be supplied with? How can we just run this function on the fly? If we try to call it directly, we get an error.&lt;/p&gt;
@@ -2883,6 +3660,7 @@ p$tidyWater(water, wall)
       
       <guid>/2017/08/09/the-twitter-waterflow-problem/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;div id=&#34;introduction&#34; class=&#34;section level2&#34;&gt;
@@ -3112,6 +3890,7 @@ p &amp;lt;- waterflow$new(wall)&lt;/code&gt;&lt;/pre&gt;
       
       <guid>/2017/05/16/automatically-building-testing-and-deploying-bookdown-with-travis-and-github-pages/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;p&gt;I recently began writing some documentation around coding standards using &lt;code&gt;bookdown&lt;/code&gt;. The workflow I was using was to write the new sections of the book, build the book and then push the changes to GitHub where it is &lt;a href=&#34;https://datasciencecampus.github.io/coding-standards/&#34;&gt;hosted&lt;/a&gt; using GitHub Pages. This was clearly one manual step too far for me as I consistently forgot to build the book before I pushed the changes to GitHub meaning those changes were not shown on the subsequent web pages. Then when I finally did manage to convert the &lt;code&gt;Rmarkdown&lt;/code&gt; to &lt;code&gt;html&lt;/code&gt;, I found that some links would be broken or missing, I therefore needed two things:&lt;/p&gt;
@@ -3157,7 +3936,7 @@ env:
 notifications:
   email: false&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;Note, the &lt;code&gt;GITHUB_TOKEN&lt;/code&gt; is a GitHub Personal Access Token (PAT) that you store in the &lt;a href=&#34;travis-ci.org&#34;&gt;travis-ci.org&lt;/a&gt; dashboard under the settings for the repository.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/img/github_token.png&#34; width=&#34;800px&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/Users/nathan/Documents/work/blog/static/img/github_token.png&#34; width=&#34;800px&#34; /&gt;&lt;/p&gt;
 &lt;p&gt;The &lt;code&gt;cibuild&lt;/code&gt; is then a simple file that first renders the book (&lt;code&gt;_build.sd&lt;/code&gt;), thus creating the &lt;code&gt;html&lt;/code&gt; files within a &lt;code&gt;docs&lt;/code&gt; folder (which is specified in the &lt;code&gt;output_dir:&lt;/code&gt; tag in my &lt;code&gt;_bookdown.yml&lt;/code&gt; file) and then it runs the &lt;code&gt;html-proofer&lt;/code&gt; on the resulting &lt;code&gt;html&lt;/code&gt; files.&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;. _build.sh
 htmlproofer ./docs&lt;/code&gt;&lt;/pre&gt;
@@ -3176,6 +3955,7 @@ Rscript -e &amp;quot;bookdown::render_book(&amp;#39;index.Rmd&amp;#39;, &amp;#39
       
       <guid>/2016/11/21/piping-within-pipes/</guid>
       <description>
+&lt;script src=&#34;/rmarkdown-libs/header-attrs/header-attrs.js&#34;&gt;&lt;/script&gt;
 
 
 &lt;p&gt;The &lt;code&gt;magrittr&lt;/code&gt; pipe (&lt;code&gt;%&amp;gt;%&lt;/code&gt;) has revolutionised the way many people now write R code. I’ve been using R for over 7 years and the pipe has become a staple of my programming conventions. However it was recently brought to my attention that you can actually use pipes within function calls, which can make my code even more human readable. Take for example the following code.&lt;/p&gt;
